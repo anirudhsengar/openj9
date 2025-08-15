@@ -57,6 +57,29 @@ jobs:
             exit 1
           fi
 
+      - name: Verify PAT Permissions
+        run: |
+          echo "Testing PAT permissions..."
+          
+          # Test repository access
+          response=$(curl -s -w "%{http_code}" -H "Authorization: token ${{ secrets.TRIAGE_PAT }}" \
+            https://api.github.com/repos/anirudhsengar/aqa-triage-data)
+          
+          http_code="${response: -3}"
+          if [ "$http_code" = "200" ]; then
+            echo "✅ PAT has repository access"
+          else
+            echo "❌ PAT does not have repository access (HTTP $http_code)"
+            echo "Response: ${response%???}"
+            exit 1
+          fi
+
+          # Test user permissions
+          user_response=$(curl -s -H "Authorization: token ${{ secrets.TRIAGE_PAT }}" \
+            https://api.github.com/user)
+          
+          echo "Authenticated as: $(echo "$user_response" | grep -o '"login":"[^"]*"' | cut -d'"' -f4)"
+
       - name: Create Test Files
         run: |
           echo "Creating test files for PR creation..."
@@ -73,13 +96,20 @@ jobs:
         run: |
           echo "Testing PR creation to anirudhsengar/aqa-triage-data..."
 
-          # Clone the aqa-triage-data repository using PAT
-          git clone https://${{ secrets.TRIAGE_PAT }}:x-oauth-basic@github.com/anirudhsengar/aqa-triage-data.git
+          # Configure git credentials using the PAT
+          git config --global user.name "GlitchWitcher Test Bot"
+          git config --global user.email "glitchwicher-test-bot@adoptium.net"
+          git config --global credential.helper store
+
+          # Store credentials in git credential store
+          echo "https://${{ secrets.TRIAGE_PAT }}@github.com" > ~/.git-credentials
+
+          # Clone the aqa-triage-data repository
+          git clone https://github.com/anirudhsengar/aqa-triage-data.git
           cd aqa-triage-data
 
-          # Configure git
-          git config user.name "GlitchWitcher Test Bot"
-          git config user.email "glitchwicher-test-bot@adoptium.net"
+          # Verify we're in the right repository
+          echo "Current repository: $(git remote get-url origin)"
 
           # Create target directory
           target_dir="GlitchWitcher/Traditional Dataset/TEST-${{ steps.parse-command.outputs.full_repo_name }}"
@@ -96,8 +126,8 @@ jobs:
           git add .
           git commit -m "TEST: Add dataset and trained model for ${{ steps.parse-command.outputs.full_repo_name }}"
 
-          # Push branch using PAT
-          git push https://${{ secrets.TRIAGE_PAT }}:x-oauth-basic@github.com/anirudhsengar/aqa-triage-data.git "$branch_name"
+          # Push branch (credentials should be automatically used)
+          git push origin "$branch_name"
 
           # Create PR using GitHub API
           cat > pr_body.md << EOF
@@ -133,7 +163,7 @@ jobs:
               "draft": true
             }')
 
-          # Extract PR number
+          # Extract PR number and URL
           PR_NUMBER=$(echo "$PR_RESPONSE" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
           PR_URL=$(echo "$PR_RESPONSE" | grep -o '"html_url":"[^"]*"' | head -1 | sed 's/"html_url":"\([^"]*\)"/\1/')
           
@@ -170,6 +200,7 @@ jobs:
             
             ### 📋 Test Summary:
             - ✅ Successfully parsed GlitchWitcher command
+            - ✅ Successfully verified PAT permissions
             - ✅ Successfully cloned aqa-triage-data repository
             - ✅ Successfully created test files
             - ✅ Successfully created and pushed branch
@@ -177,6 +208,12 @@ jobs:
             
             ### ⚠️ Next Steps:
             Please manually verify the test PR and delete it after verification.
+            
+            ### 🔧 PAT Requirements Note:
+            For this workflow to work, the TRIAGE_PAT secret needs the following GitHub permissions:
+            - **Contents**: Write (to push code and create branches)
+            - **Pull requests**: Write (to create PRs)
+            - **Metadata**: Read (basic repository access)
             
             *Test performed by GlitchWitcher Test Bot*`;
 
@@ -186,3 +223,10 @@ jobs:
               repo: context.repo.repo,
               body: commentBody
             });
+
+      - name: Cleanup Credentials
+        if: always()
+        run: |
+          # Clean up git credentials for security
+          rm -f ~/.git-credentials
+          git config --global --unset credential.helper || true
