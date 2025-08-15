@@ -367,37 +367,29 @@ jobs:
               curl -L -o trained_model/preprocessor.pkl "$base_url/preprocessor.pkl" || echo "preprocessor.pkl not found"
             fi
 
-            # Create comparison script (note: tabs before lines are intentional for <<-)
-            cat > compare_predictions.py <<-'PY'
-                import os
-                import pandas as pd
-                from sklearn.metrics import mean_squared_error, mean_absolute_error
-                import joblib
-
-                # Load model
-                model = joblib.load('trained_model/model.pkl')
-                X_test = pd.read_csv(os.environ['GITHUB_WORKSPACE'] + '/metrics_head/summary_metrics.csv')
-                y_pred = model.predict(X_test)
-
-                # Load ground truth if available
-                if os.path.exists(os.environ['GITHUB_WORKSPACE'] + '/metrics_base/summary_metrics.csv'):
-                    y_true = pd.read_csv(os.environ['GITHUB_WORKSPACE'] + '/metrics_base/summary_metrics.csv')
-
-                    # Calculate metrics
-                    mse = mean_squared_error(y_true['v(g)'], y_pred)
-                    mae = mean_absolute_error(y_true['v(g)'], y_pred)
-
-                    print(f"Metrics (MSE, MAE): ({mse}, {mae})")
-                else:
-                    print("No ground truth available for comparison")
-
-                # Prepare submission file
-                submission = pd.DataFrame({
-                    'File': X_test['File'],
-                    'Predicted_v(g)': y_pred
-                })
-                submission.to_csv('submission.csv', index=False)
-            PY
+            # Create comparison script without heredoc to avoid EOF issues
+            printf '%s\n' \
+            "import os" \
+            "import pandas as pd" \
+            "from sklearn.metrics import mean_squared_error, mean_absolute_error" \
+            "import joblib" \
+            "" \
+            "model = joblib.load('trained_model/model.pkl')" \
+            "head_csv = os.path.join(os.environ.get('GITHUB_WORKSPACE', '.'), 'metrics_head', 'summary_metrics.csv')" \
+            "base_csv = os.path.join(os.environ.get('GITHUB_WORKSPACE', '.'), 'metrics_base', 'summary_metrics.csv')" \
+            "X_test = pd.read_csv(head_csv)" \
+            "y_pred = model.predict(X_test)" \
+            "" \
+            "if os.path.exists(base_csv):" \
+            "    y_true = pd.read_csv(base_csv)" \
+            "    mse = mean_squared_error(y_true['v(g)'], y_pred)" \
+            "    mae = mean_absolute_error(y_true['v(g)'], y_pred)" \
+            "    print(f'Metrics (MSE, MAE): ({mse}, {mae})')" \
+            "else:" \
+            "    print('No ground truth available for comparison')" \
+            "" \
+            "pd.DataFrame({'File': X_test['File'], 'Predicted_v(g)': y_pred}).to_csv('submission.csv', index=False)" \
+            > compare_predictions.py
 
             # Run comparison
             python3 compare_predictions.py
@@ -405,7 +397,7 @@ jobs:
             # Surface a short result to the next step
             echo "analysis_result=Predictions generated. Saved submission.csv." >> $GITHUB_OUTPUT
 
-            # Upload results (optional: may fail if no release; consider artifact upload in a follow-up change)
+            # Upload results (optional)
             curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" \
               -F "file=@submission.csv" \
               https://uploads.github.com/repos/${{ steps.parse-command.outputs.repo_owner }}/${{ steps.parse-command.outputs.repo_name }}/releases/assets?name=submission.csv || true
