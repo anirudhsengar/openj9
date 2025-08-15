@@ -73,6 +73,7 @@ jobs:
         run: |
           echo "Downloading scripts from aqa-test-tools repository..."
           curl -L -o ExtractTraditionalFeatures.sh "https://raw.githubusercontent.com/anirudhsengar/aqa-triage-data/refs/heads/main/GlitchWitcher/Traditional%20Dataset/ExtractTraditionalFeatures.sh"
+          curl -L -o extract_traditional_features.sh "https://raw.githubusercontent.com/adoptium/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/extract_traditional_features.sh"
           curl -L -o save_trained_model.py "https://raw.githubusercontent.com/anirudhsengar/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/save_trained_model.py"
           curl -L -o predict.py "https://raw.githubusercontent.com/adoptium/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/predict.py"
           curl -L -o REPD_Impl.py "https://raw.githubusercontent.com/adoptium/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/REPD_Impl.py"
