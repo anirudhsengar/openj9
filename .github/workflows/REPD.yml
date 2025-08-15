@@ -65,7 +65,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install tensorflow==2.12.0 pandas joblib scipy numpy urllib3
+          pip install tensorflow==2.12.0 pandas joblib scipy numpy urllib3 scikit-learn
           sudo apt-get update
           sudo apt-get install -y cloc git
 
@@ -296,10 +296,8 @@ jobs:
         id: analysis
         run: |
           echo "Running GlitchWitcher analysis on ${{ steps.parse-command.outputs.pr_link }}..."
-
           # Get PR details using GitHub API
           pr_api_url="https://api.github.com/repos/${{ steps.parse-command.outputs.repo_owner }}/${{ steps.parse-command.outputs.repo_name }}/pulls/${{ steps.parse-command.outputs.pr_number }}"
-
           pr_info=$(curl -s -H "Accept: application/vnd.github.v3+json" "$pr_api_url")
           base_sha=$(echo "$pr_info" | grep -o '"sha": *"[^"]*"' | head -1 | sed 's/"sha": *"\([^"]*\)"/\1/')
           head_sha=$(echo "$pr_info" | grep -o '"sha": *"[^"]*"' | tail -1 | sed 's/"sha": *"\([^"]*\)"/\1/')
@@ -327,7 +325,6 @@ jobs:
           git checkout "$base_sha"
           mkdir -p ../metrics_base
           echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > ../metrics_base/summary_metrics.csv
-
           for file in $changed_files; do
             if [ -f "$file" ]; then
               echo "Processing $file (base)..."
@@ -344,7 +341,6 @@ jobs:
           git checkout "$head_sha"
           mkdir -p ../metrics_head
           echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > ../metrics_head/summary_metrics.csv
-
           for file in $changed_files; do
             if [ -f "$file" ]; then
               echo "Processing $file (head)..."
@@ -362,7 +358,6 @@ jobs:
           # Run predictions if we have a model
           if [ "${{ steps.check-dataset.outputs.model_exists }}" == "true" ] || [ -d "trained_model" ]; then
             echo "Running predictions..."
-            
             # Download existing model if we didn't train one
             if [ "${{ steps.check-dataset.outputs.model_exists }}" == "true" ] && [ ! -d "trained_model" ]; then
               mkdir -p trained_model
@@ -371,48 +366,52 @@ jobs:
               curl -L -o trained_model/model.pkl "$base_url/model.pkl" || echo "model.pkl not found"
               curl -L -o trained_model/preprocessor.pkl "$base_url/preprocessor.pkl" || echo "preprocessor.pkl not found"
             fi
-            
-            # Create comparison script
-            cat > compare_predictions.py << 'EOF'
-            import os
-            import pandas as pd
-            from sklearn.metrics import mean_squared_error, mean_absolute_error
-            import joblib
 
-            # Load model
-            model = joblib.load('trained_model/model.pkl')
-            X_test = pd.read_csv(os.environ['GITHUB_WORKSPACE'] + '/metrics_head/summary_metrics.csv')
-            y_pred = model.predict(X_test)
+            # Create comparison script (note: tabs before lines are intentional for <<-)
+            cat > compare_predictions.py <<-'PY'
+                import os
+                import pandas as pd
+                from sklearn.metrics import mean_squared_error, mean_absolute_error
+                import joblib
 
-            # Load ground truth if available
-            if os.path.exists(os.environ['GITHUB_WORKSPACE'] + '/metrics_base/summary_metrics.csv'):
-              y_true = pd.read_csv(os.environ['GITHUB_WORKSPACE'] + '/metrics_base/summary_metrics.csv')
-              
-              # Calculate metrics
-              mse = mean_squared_error(y_true['v(g)'], y_pred)
-              mae = mean_absolute_error(y_true['v(g)'], y_pred)
-              
-              print(f"Metrics (MSE, MAE): ({mse}, {mae})")
-            else:
-              print("No ground truth available for comparison")
-            
-            # Prepare submission file
-            submission = pd.DataFrame({
-              'File': X_test['File'],
-              'Predicted_v(g)': y_pred
-            })
-            submission.to_csv('submission.csv', index=False)
-            EOF
+                # Load model
+                model = joblib.load('trained_model/model.pkl')
+                X_test = pd.read_csv(os.environ['GITHUB_WORKSPACE'] + '/metrics_head/summary_metrics.csv')
+                y_pred = model.predict(X_test)
+
+                # Load ground truth if available
+                if os.path.exists(os.environ['GITHUB_WORKSPACE'] + '/metrics_base/summary_metrics.csv'):
+                    y_true = pd.read_csv(os.environ['GITHUB_WORKSPACE'] + '/metrics_base/summary_metrics.csv')
+
+                    # Calculate metrics
+                    mse = mean_squared_error(y_true['v(g)'], y_pred)
+                    mae = mean_absolute_error(y_true['v(g)'], y_pred)
+
+                    print(f"Metrics (MSE, MAE): ({mse}, {mae})")
+                else:
+                    print("No ground truth available for comparison")
+
+                # Prepare submission file
+                submission = pd.DataFrame({
+                    'File': X_test['File'],
+                    'Predicted_v(g)': y_pred
+                })
+                submission.to_csv('submission.csv', index=False)
+            PY
 
             # Run comparison
             python3 compare_predictions.py
 
-            # Upload results
+            # Surface a short result to the next step
+            echo "analysis_result=Predictions generated. Saved submission.csv." >> $GITHUB_OUTPUT
+
+            # Upload results (optional: may fail if no release; consider artifact upload in a follow-up change)
             curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" \
               -F "file=@submission.csv" \
-              https://uploads.github.com/repos/${{ steps.parse-command.outputs.repo_owner }}/${{ steps.parse-command.outputs.repo_name }}/releases/assets?name=submission.csv
+              https://uploads.github.com/repos/${{ steps.parse-command.outputs.repo_owner }}/${{ steps.parse-command.outputs.repo_name }}/releases/assets?name=submission.csv || true
           else
             echo "No model found for predictions"
+            echo "analysis_result=No model found for predictions." >> $GITHUB_OUTPUT
           fi
 
       - name: Comment Results
