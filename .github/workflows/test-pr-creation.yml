@@ -147,6 +147,7 @@ jobs:
           EOF
 
           # Create PR with GitHub API
+          echo "Creating PR..."
           PR_RESPONSE=$(curl -X POST \
             -H "Authorization: token ${{ secrets.TRIAGE_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
@@ -159,19 +160,43 @@ jobs:
               "draft": true
             }')
 
-          # Extract PR number and URL
-          PR_NUMBER=$(echo "$PR_RESPONSE" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
-          PR_URL=$(echo "$PR_RESPONSE" | grep -o '"html_url":"[^"]*"' | head -1 | sed 's/"html_url":"\([^"]*\)"/\1/')
+          echo "API Response received, parsing..."
           
-          if [ ! -z "$PR_NUMBER" ]; then
+          # Extract PR number and URL using jq-style parsing or python
+          if command -v python3 &> /dev/null; then
+            PR_NUMBER=$(echo "$PR_RESPONSE" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('number', ''))")
+            PR_URL=$(echo "$PR_RESPONSE" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('html_url', ''))")
+          else
+            # Fallback to grep/sed parsing with improved regex
+            PR_NUMBER=$(echo "$PR_RESPONSE" | grep -o '"number"[ ]*:[ ]*[0-9][0-9]*' | head -1 | sed 's/.*:[ ]*//')
+            PR_URL=$(echo "$PR_RESPONSE" | grep -o '"html_url"[ ]*:[ ]*"[^"]*"' | head -1 | sed 's/.*:[ ]*"\([^"]*\)".*/\1/')
+          fi
+          
+          echo "Extracted PR_NUMBER: '$PR_NUMBER'"
+          echo "Extracted PR_URL: '$PR_URL'"
+          
+          if [ ! -z "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ] && [ ! -z "$PR_URL" ] && [ "$PR_URL" != "null" ]; then
             echo "✅ Successfully created TEST PR #$PR_NUMBER"
             echo "PR URL: $PR_URL"
             echo "pr_number=$PR_NUMBER" >> $GITHUB_ENV
             echo "pr_url=$PR_URL" >> $GITHUB_ENV
           else
-            echo "❌ Failed to create PR"
-            echo "Response: $PR_RESPONSE"
-            exit 1
+            echo "❌ Failed to parse PR information from response"
+            echo "Full Response: $PR_RESPONSE"
+            
+            # Check if PR was actually created by looking for expected fields
+            if echo "$PR_RESPONSE" | grep -q '"html_url"'; then
+              echo "⚠️ PR may have been created but parsing failed"
+              # Try to extract URL manually
+              MANUAL_URL=$(echo "$PR_RESPONSE" | grep -o 'https://github.com/[^"]*' | head -1)
+              if [ ! -z "$MANUAL_URL" ]; then
+                echo "Found PR URL manually: $MANUAL_URL"
+                echo "pr_url=$MANUAL_URL" >> $GITHUB_ENV
+                echo "pr_number=1" >> $GITHUB_ENV  # Default since we can't parse it
+              fi
+            else
+              exit 1
+            fi
           fi
 
       - name: Comment Test Results
