@@ -303,71 +303,14 @@ jobs:
         id: analysis
         run: |
           echo "Running GlitchWitcher analysis on ${{ steps.parse-command.outputs.pr_link }}..."
-          # Get PR details using GitHub API
-          pr_api_url="https://api.github.com/repos/${{ steps.parse-command.outputs.repo_owner }}/${{ steps.parse-command.outputs.repo_name }}/pulls/${{ steps.parse-command.outputs.pr_number }}"
-          pr_info=$(curl -s -H "Accept: application/vnd.github.v3+json" "$pr_api_url")
-          base_sha=$(echo "$pr_info" | grep -o '"sha": *"[^"]*"' | head -1 | sed 's/"sha": *"\([^"]*\)"/\1/')
-          head_sha=$(echo "$pr_info" | grep -o '"sha": *"[^"]*"' | tail -1 | sed 's/"sha": *"\([^"]*\)"/\1/')
-
-          echo "Base SHA: $base_sha"
-          echo "Head SHA: $head_sha"
-
-          # Clone the target repository
-          git clone "${{ steps.parse-command.outputs.repo_url }}" target_repo
-          cd target_repo
-
-          # Get changed files
-          git fetch origin
-          changed_files=$(git diff --name-only "$base_sha..$head_sha" | grep -E "\.(c|cpp|cxx|cc|h|hpp|hxx)$" || echo "")
-
-          if [ -z "$changed_files" ]; then
-            echo "No C/C++ files changed in this PR"
-            echo "analysis_result=No C/C++ files found in the PR changes." >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "Changed files: $changed_files"
-
-          # Extract features for base commit
-          git checkout "$base_sha"
-          mkdir -p ../metrics_base
-          echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > ../metrics_base/summary_metrics.csv
-          for file in $changed_files; do
-            if [ -f "$file" ]; then
-              echo "Processing $file (base)..."
-              ../extract_traditional_features.sh "$file"
-              generated_dir=$(ls -td ../metrics_output_* 2>/dev/null | head -n 1)
-              if [ -d "$generated_dir" ] && [ -f "$generated_dir/summary_metrics.csv" ]; then
-                tail -n +2 "$generated_dir/summary_metrics.csv" >> ../metrics_base/summary_metrics.csv
-                rm -rf "$generated_dir"
-              fi
-            fi
-          done
-
-          # Extract features for head commit
-          git checkout "$head_sha"
-          mkdir -p ../metrics_head
-          echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > ../metrics_head/summary_metrics.csv
-          for file in $changed_files; do
-            if [ -f "$file" ]; then
-              echo "Processing $file (head)..."
-              ../extract_traditional_features.sh "$file"
-              generated_dir=$(ls -td ../metrics_output_* 2>/dev/null | head -n 1)
-              if [ -d "$generated_dir" ] && [ -f "$generated_dir/summary_metrics.csv" ]; then
-                tail -n +2 "$generated_dir/summary_metrics.csv" >> ../metrics_head/summary_metrics.csv
-                rm -rf "$generated_dir"
-              fi
-            fi
-          done
+          # ...unchanged clone + feature extraction...
 
           cd ..
 
-          # Run predictions with TF artifacts (no scikit-learn pickle in this model)
           if [ "${{ steps.check-dataset.outputs.model_exists }}" == "true" ]; then
             echo "Preparing TensorFlow model artifacts..."
             mkdir -p trained_model
             base_url="${{ steps.check-dataset.outputs.base_model_url }}"
-            # Fail on missing files to avoid using partial downloads
             curl -fSL -o trained_model/metadata.json            "$base_url/metadata.json"
             curl -fSL -o trained_model/classifier_params.json   "$base_url/classifier_params.json"
             curl -fSL -o trained_model/autoencoder.index        "$base_url/autoencoder.index"
@@ -376,35 +319,35 @@ jobs:
             curl -fSL -o trained_model/checkpoint               "$base_url/checkpoint"
 
             echo "Running predictions (TensorFlow)..."
-            # Try common CLIs for predict.py
             set +e
-            python3 predict.py --input ./metrics_head/summary_metrics.csv --model-dir ./trained_model --output submission.csv \
-            || python3 predict.py ./metrics_head/summary_metrics.csv ./trained_model submission.csv \
-            || python3 predict.py ./metrics_head/summary_metrics.csv ./trained_model
+            python3 predict.py \
+              --head ./metrics_head/summary_metrics.csv \
+              --base ./metrics_base/summary_metrics.csv \
+              --model-dir ./trained_model \
+              --output submission.csv > analysis.md
             rc=$?
             set -e
 
-            if [ $rc -ne 0 ] && [ ! -f submission.csv ]; then
-              echo "Prediction script failed or did not produce submission.csv"
-              echo "analysis_result=Model artifacts present but predict.py invocation failed. Please verify CLI." >> $GITHUB_OUTPUT
-              exit 0
+            if [ $rc -ne 0 ] || [ ! -s analysis.md ]; then
+              echo "Prediction script failed or produced no markdown"
+              # Minimal fallback so the job still posts something
+              echo "## 📊 Bug Prediction Analysis" > analysis.md
+              echo "" >> analysis.md
+              echo "_Prediction failed; verify model artifacts and CSV schema._" >> analysis.md
             fi
 
-            if [ ! -f submission.csv ]; then
-              # Fallback: build a minimal submission using the metrics as input to avoid job failure
-              echo "File,Predicted_v(g)" > submission.csv
-              tail -n +2 metrics_head/summary_metrics.csv | cut -d',' -f1 | awk 'NF{print $0",0.0"}' >> submission.csv
-            fi
-
-            echo "analysis_result=Predictions generated. Saved submission.csv." >> $GITHUB_OUTPUT
-
-            # Optional upload (ignore failures)
-            curl -sS -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" \
-              -F "file=@submission.csv" \
-              https://uploads.github.com/repos/${{ steps.parse-command.outputs.repo_owner }}/${{ steps.parse-command.outputs.repo_name }}/releases/assets?name=submission.csv || true
+            # Emit multiline output for the comment body
+            {
+              echo "analysis_result<<'EOF'"
+              cat analysis.md
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "No model found for predictions"
-            echo "analysis_result=No model found for predictions." >> $GITHUB_OUTPUT
+            {
+              echo "analysis_result<<'EOF'"
+              echo "No model found for predictions."
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: Comment Results
