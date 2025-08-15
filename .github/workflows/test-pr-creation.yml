@@ -96,16 +96,12 @@ jobs:
         run: |
           echo "Testing PR creation to anirudhsengar/aqa-triage-data..."
 
-          # Configure git credentials using the PAT
+          # Configure git user (no credential helper needed)
           git config --global user.name "GlitchWitcher Test Bot"
           git config --global user.email "glitchwicher-test-bot@adoptium.net"
-          git config --global credential.helper store
 
-          # Store credentials in git credential store
-          echo "https://${{ secrets.TRIAGE_PAT }}@github.com" > ~/.git-credentials
-
-          # Clone the aqa-triage-data repository
-          git clone https://github.com/anirudhsengar/aqa-triage-data.git
+          # Clone the aqa-triage-data repository using PAT in URL
+          git clone https://${{ secrets.TRIAGE_PAT }}@github.com/anirudhsengar/aqa-triage-data.git
           cd aqa-triage-data
 
           # Verify we're in the right repository
@@ -126,8 +122,8 @@ jobs:
           git add .
           git commit -m "TEST: Add dataset and trained model for ${{ steps.parse-command.outputs.full_repo_name }}"
 
-          # Push branch (credentials should be automatically used)
-          git push origin "$branch_name"
+          # Push branch using PAT in URL
+          git push https://${{ secrets.TRIAGE_PAT }}@github.com/anirudhsengar/aqa-triage-data.git "$branch_name"
 
           # Create PR using GitHub API
           cat > pr_body.md << EOF
@@ -219,6 +215,10 @@ jobs:
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: commentBody

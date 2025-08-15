@@ -156,13 +156,13 @@ jobs:
         run: |
           echo "Creating PR to anirudhsengar/aqa-triage-data..."
 
-          # Clone the aqa-triage-data repository using PAT
-          git clone https://${{ secrets.TRIAGE_PAT }}:x-oauth-basic@github.com/anirudhsengar/aqa-triage-data.git
-          cd aqa-triage-data
+          # Configure git user
+          git config --global user.name "GlitchWitcher Bot"
+          git config --global user.email "glitchwicher-bot@adoptium.net"
 
-          # Configure git
-          git config user.name "GlitchWitcher Bot"
-          git config user.email "glitchwicher-bot@adoptium.net"
+          # Clone the aqa-triage-data repository using PAT in URL
+          git clone https://${{ secrets.TRIAGE_PAT }}@github.com/anirudhsengar/aqa-triage-data.git
+          cd aqa-triage-data
 
           # Create target directory
           target_dir="GlitchWitcher/Traditional Dataset/${{ steps.parse-command.outputs.full_repo_name }}"
@@ -185,10 +185,10 @@ jobs:
           git add .
           git commit -m "Add dataset and trained model for ${{ steps.parse-command.outputs.full_repo_name }}"
 
-          # Push branch using PAT
-          git push https://${{ secrets.TRIAGE_PAT }}:x-oauth-basic@github.com/anirudhsengar/aqa-triage-data.git "$branch_name"
+          # Push branch using PAT in URL
+          git push https://${{ secrets.TRIAGE_PAT }}@github.com/anirudhsengar/aqa-triage-data.git "$branch_name"
 
-          # Create PR using GitHub CLI with PAT
+          # Create PR using GitHub API
           cat > pr_body.md << EOF
           # GlitchWitcher Dataset Addition
 
@@ -236,6 +236,7 @@ jobs:
             echo "Failed to create PR"
             exit 1
           fi
+
       - name: Run Analysis on Target PR
         id: analysis
         run: |
@@ -318,6 +319,46 @@ jobs:
             
             # Create comparison script
             cat > compare_predictions.py << 'EOF'
+            import os
+            import pandas as pd
+            from sklearn.metrics import mean_squared_error, mean_absolute_error
+            import joblib
+
+            # Load model
+            model = joblib.load('trained_model/model.pkl')
+            X_test = pd.read_csv(os.environ['GITHUB_WORKSPACE'] + '/metrics_head/summary_metrics.csv')
+            y_pred = model.predict(X_test)
+
+            # Load ground truth if available
+            if os.path.exists(os.environ['GITHUB_WORKSPACE'] + '/metrics_base/summary_metrics.csv'):
+              y_true = pd.read_csv(os.environ['GITHUB_WORKSPACE'] + '/metrics_base/summary_metrics.csv')
+              
+              # Calculate metrics
+              mse = mean_squared_error(y_true['v(g)'], y_pred)
+              mae = mean_absolute_error(y_true['v(g)'], y_pred)
+              
+              print(f"Metrics (MSE, MAE): ({mse}, {mae})")
+            else:
+              print("No ground truth available for comparison")
+            
+            # Prepare submission file
+            submission = pd.DataFrame({
+              'File': X_test['File'],
+              'Predicted_v(g)': y_pred
+            })
+            submission.to_csv('submission.csv', index=False)
+            EOF
+
+            # Run comparison
+            python3 compare_predictions.py
+
+            # Upload results
+            curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" \
+              -F "file=@submission.csv" \
+              https://uploads.github.com/repos/${{ steps.parse-command.outputs.repo_owner }}/${{ steps.parse-command.outputs.repo_name }}/releases/assets?name=submission.csv
+          else
+            echo "No model found for predictions"
+          fi
 
       - name: Comment Results
         uses: actions/github-script@v6
