@@ -80,7 +80,7 @@ jobs:
           curl -L -o autoencoder.py "https://raw.githubusercontent.com/adoptium/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/autoencoder.py"
           curl -L -o stat_util.py "https://raw.githubusercontent.com/adoptium/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/stat_util.py"
           chmod +x ExtractTraditionalFeatures.sh
-          chmod +x execute_traditional_features.sh
+          chmod +x extract_traditional_features.sh
 
       - name: Check Dataset Availability
         id: check-dataset
