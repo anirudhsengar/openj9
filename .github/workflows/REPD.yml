@@ -75,12 +75,284 @@ jobs:
           curl -L -o ExtractTraditionalFeatures.sh "https://raw.githubusercontent.com/anirudhsengar/aqa-triage-data/refs/heads/main/GlitchWitcher/Traditional%20Dataset/ExtractTraditionalFeatures.sh"
           curl -L -o extract_traditional_features.sh "https://raw.githubusercontent.com/adoptium/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/extract_traditional_features.sh"
           curl -L -o save_trained_model.py "https://raw.githubusercontent.com/anirudhsengar/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/save_trained_model.py"
-          curl -L -o predict.py "https://raw.githubusercontent.com/anirudhsengar/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/predict.py"
           curl -L -o REPD_Impl.py "https://raw.githubusercontent.com/adoptium/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/REPD_Impl.py"
           curl -L -o autoencoder.py "https://raw.githubusercontent.com/adoptium/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/autoencoder.py"
           curl -L -o stat_util.py "https://raw.githubusercontent.com/adoptium/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/stat_util.py"
           chmod +x ExtractTraditionalFeatures.sh
           chmod +x extract_traditional_features.sh
+
+          # Create updated predict.py with proper CLI support
+          cat > predict.py << 'EOF'
+          import pandas as pd
+          from REPD_Impl import REPD
+          from autoencoder import AutoEncoder
+          import warnings
+          import tensorflow.compat.v1 as tf
+          import numpy as np
+          import json
+          import sys
+          import os
+          import scipy.stats as st
+
+          # Suppress warnings
+          tf.disable_v2_behavior()
+          warnings.simplefilter("ignore")
+
+          def format_predictions(predictions):
+              """Format PDF predictions for display"""
+              results = []
+              
+              print(f"Debug: Predictions shape: {predictions.shape}", file=sys.stderr)
+              print(f"Debug: Predictions content: {predictions}", file=sys.stderr)
+              
+              # Now predictions should be (n_samples, 2) - no more 3D arrays!
+              for i in range(predictions.shape[0]):
+                  pred = predictions[i]
+                  print(f"Debug: Processing prediction {i}: {pred}", file=sys.stderr)
+                  
+                  # Extract probabilities
+                  if isinstance(pred, np.ndarray) and len(pred) >= 2:
+                      p_defective = float(pred[0])
+                      p_non_defective = float(pred[1])
+                  else:
+                      print(f"Warning: Unexpected prediction format for {i}: {pred}", file=sys.stderr)
+                      p_defective = 0.0
+                      p_non_defective = 0.0
+                  
+                  results.append({
+                      'p_defective': p_defective,
+                      'p_non_defective': p_non_defective
+                  })
+                  
+                  print(f"Debug: File {i} - P(Defective): {p_defective}, P(Non-Defective): {p_non_defective}", file=sys.stderr)
+              
+              return results
+
+          def format_results(file_names, prediction_data):
+              """Format results with probability values (for individual calls)"""
+              results = []
+              
+              for i, file_name in enumerate(file_names):
+                  if i < len(prediction_data):
+                      p_defective = prediction_data[i]['p_defective']
+                      p_non_defective = prediction_data[i]['p_non_defective']
+                      
+                      results.append({
+                          'file': file_name,
+                          'p_defective': p_defective,
+                          'p_non_defective': p_non_defective
+                      })
+                  else:
+                      results.append({
+                          'file': file_name,
+                          'error': 'No prediction available'
+                      })
+              
+              return results
+
+          def get_distribution_class(dist_name):
+              """Get the distribution class (not frozen) from scipy.stats"""
+              if dist_name is None:
+                  return None
+              
+              try:
+                  dist_class = getattr(st, dist_name)
+                  return dist_class
+              except Exception as e:
+                  return None
+
+          def load_trained_model(model_dir="trained_model"):
+              """Load the pre-trained model"""
+              if not os.path.exists(model_dir):
+                  raise FileNotFoundError(f"Trained model not found at {model_dir}. Please ensure the model is trained and saved.")
+              
+              # Load metadata from JSON
+              metadata_path = os.path.join(model_dir, "metadata.json")
+              if not os.path.exists(metadata_path):
+                  raise FileNotFoundError(f"Model metadata not found at {metadata_path}")
+              
+              with open(metadata_path, 'r') as f:
+                  metadata = json.load(f)
+              
+              # Load REPD classifier parameters from JSON
+              classifier_params_path = os.path.join(model_dir, "classifier_params.json")
+              if not os.path.exists(classifier_params_path):
+                  raise FileNotFoundError(f"Classifier parameters not found at {classifier_params_path}")
+              
+              with open(classifier_params_path, 'r') as f:
+                  classifier_params = json.load(f)
+                  
+              # Recreate the autoencoder with saved architecture
+              autoencoder = AutoEncoder(
+                  metadata['architecture'], 
+                  metadata['learning_rate'], 
+                  metadata['epochs'], 
+                  metadata['batch_size']
+              )
+              
+              # Load the saved autoencoder weights
+              autoencoder_path = os.path.join(model_dir, "autoencoder")
+              autoencoder.load(autoencoder_path)
+              
+              # Recreate REPD classifier
+              classifier = REPD(autoencoder)
+                  
+              # Non-defective distribution
+              classifier.dnd = get_distribution_class(classifier_params.get('dnd_name'))
+              classifier.dnd_pa = tuple(classifier_params.get('dnd_params', []))
+              
+              # Defective distribution  
+              classifier.dd = get_distribution_class(classifier_params.get('dd_name'))
+              classifier.dd_pa = tuple(classifier_params.get('dd_params', []))
+              
+              # Check if distributions were created successfully
+              if classifier.dnd is None:
+                  raise ValueError("Failed to get non-defective distribution class")
+              if classifier.dd is None:
+                  raise ValueError("Failed to get defective distribution class")
+              
+              return classifier
+
+          def predict(features_file, model_dir="trained_model", output_file=None):
+              """Make predictions using pre-trained model"""
+              
+              classifier = load_trained_model(model_dir)
+              
+              # Load test data
+              df_test = pd.read_csv(features_file)
+              
+              # Check if CSV has data rows (more than just header)
+              if len(df_test) == 0:
+                  print("No files to analyze.")
+                  return []
+              
+              file_names = df_test["File"].values
+              X_test = df_test.drop(columns=["File"]).values
+              
+              print(f"Debug: Processing {len(file_names)} files", file=sys.stderr)
+              print(f"Debug: File names: {file_names}", file=sys.stderr)
+              print(f"Debug: X_test shape: {X_test.shape}", file=sys.stderr)
+                          
+              # Make predictions (PDF values)
+              pdf_predictions = classifier.predict(X_test)
+              print(f"Debug: Predictions shape: {pdf_predictions.shape}", file=sys.stderr)
+              print(f"Debug: Predictions type: {type(pdf_predictions)}", file=sys.stderr)
+              
+              # Format predictions for display
+              prediction_data = format_predictions(pdf_predictions)
+
+              # Format and return results
+              results = format_results(file_names, prediction_data)
+              
+              # Save to output file if specified
+              if output_file:
+                  # Create submission CSV format
+                  submission_data = []
+                  for i, file_name in enumerate(file_names):
+                      if i < len(prediction_data):
+                          # Use p_defective as the predicted v(g) value
+                          predicted_vg = prediction_data[i]['p_defective']
+                          submission_data.append({
+                              'File': file_name,
+                              'Predicted_v(g)': predicted_vg
+                          })
+                      else:
+                          submission_data.append({
+                              'File': file_name,
+                              'Predicted_v(g)': 0.0
+                          })
+                  
+                  submission_df = pd.DataFrame(submission_data)
+                  submission_df.to_csv(output_file, index=False)
+                  print(f"Predictions saved to {output_file}")
+              
+              # Close the session
+              classifier.dim_reduction_model.close()
+              
+              return results
+
+          def print_usage():
+              """Print usage information"""
+              print("Usage:")
+              print("  python predict.py <features_csv> [model_dir] [output_csv]")
+              print("  python predict.py --input <features_csv> --model-dir <model_dir> --output <output_csv>")
+              print("")
+              print("Arguments:")
+              print("  features_csv    Path to the CSV file containing extracted features")
+              print("  model_dir       Path to the directory containing trained model files (default: 'trained_model')")
+              print("  output_csv      Path to save predictions as CSV (optional)")
+              print("")
+              print("Examples:")
+              print("  python predict.py features.csv")
+              print("  python predict.py features.csv ./my_model")
+              print("  python predict.py features.csv ./my_model predictions.csv")
+              print("  python predict.py --input features.csv --model-dir ./my_model --output predictions.csv")
+
+          if __name__ == "__main__":
+              if len(sys.argv) < 2:
+                  print_usage()
+                  sys.exit(1)
+              
+              # Parse command line arguments
+              features_csv_path = None
+              model_dir = "trained_model"
+              output_file = None
+              
+              # Support both positional and named arguments
+              if sys.argv[1] == "--input":
+                  # Named argument format
+                  i = 1
+                  while i < len(sys.argv):
+                      if sys.argv[i] == "--input" and i + 1 < len(sys.argv):
+                          features_csv_path = sys.argv[i + 1]
+                          i += 2
+                      elif sys.argv[i] == "--model-dir" and i + 1 < len(sys.argv):
+                          model_dir = sys.argv[i + 1]
+                          i += 2
+                      elif sys.argv[i] == "--output" and i + 1 < len(sys.argv):
+                          output_file = sys.argv[i + 1]
+                          i += 2
+                      else:
+                          i += 1
+              else:
+                  # Positional argument format
+                  features_csv_path = sys.argv[1]
+                  if len(sys.argv) > 2:
+                      model_dir = sys.argv[2]
+                  if len(sys.argv) > 3:
+                      output_file = sys.argv[3]
+              
+              if not features_csv_path:
+                  print("Error: Features CSV file path is required")
+                  print_usage()
+                  sys.exit(1)
+              
+              if not os.path.exists(features_csv_path):
+                  print(f"Error: Features CSV file not found: {features_csv_path}")
+                  sys.exit(1)
+              
+              if not os.path.exists(model_dir):
+                  print(f"Error: Model directory not found: {model_dir}")
+                  sys.exit(1)
+              
+              try:
+                  results = predict(features_csv_path, model_dir, output_file)
+                  
+                  # For command line usage, print individual results
+                  for result in results:
+                      if 'error' in result:
+                          print(f"File: {result['file']}")
+                          print(f"Error: {result['error']}")
+                      else:
+                          print(f"File: {result['file']}")
+                          print(f"PDF(Defective | Reconstruction Error): {result['p_defective']}")
+                          print(f"PDF(Non-Defective | Reconstruction Error): {result['p_non_defective']}")
+                      print()
+                      
+              except Exception as e:
+                  print(f"Error during prediction: {str(e)}", file=sys.stderr)
+                  sys.exit(1)
+          EOF
 
       - name: Check Dataset Availability
         id: check-dataset
