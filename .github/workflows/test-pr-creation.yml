@@ -244,10 +244,6 @@ jobs:
               repo: context.repo.repo,
               body: commentBody
             });
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: commentBody
-            });
 
       - name: Cleanup Credentials
         if: always()
