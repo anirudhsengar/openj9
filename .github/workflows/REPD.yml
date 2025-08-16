@@ -81,7 +81,7 @@ jobs:
           chmod +x ExtractTraditionalFeatures.sh
           chmod +x extract_traditional_features.sh
 
-          # Create updated predict.py with proper CLI support
+          # Create predict.py with the exact same functions as the old working version
           cat > predict.py << 'EOF'
           import pandas as pd
           from REPD_Impl import REPD
@@ -127,6 +127,98 @@ jobs:
                   print(f"Debug: File {i} - P(Defective): {p_defective}, P(Non-Defective): {p_non_defective}", file=sys.stderr)
               
               return results
+
+          def format_results_for_comparison(file_names, base_data, head_data):
+              """Format results as tables comparing BEFORE and AFTER for each file"""
+              
+              # First, calculate percentage changes for all files to determine sorting order
+              file_changes = []
+              
+              for i, file_name in enumerate(file_names):
+                  if i < len(base_data) and i < len(head_data):
+                      base_defective = base_data[i]['p_defective']
+                      base_non_defective = base_data[i]['p_non_defective']
+                      head_defective = head_data[i]['p_defective']
+                      head_non_defective = head_data[i]['p_non_defective']
+                      
+                      # Calculate percentage changes
+                      if base_defective != 0:
+                          defective_change = ((head_defective - base_defective) / abs(base_defective)) * 100
+                      else:
+                          defective_change = 0 if head_defective == 0 else float('inf')
+                      
+                      if base_non_defective != 0:
+                          non_defective_change = ((head_non_defective - base_non_defective) / abs(base_non_defective)) * 100
+                      else:
+                          non_defective_change = 0 if head_non_defective == 0 else float('inf')
+                      
+                      # Use the maximum absolute change for sorting
+                      max_change = max(abs(defective_change), abs(non_defective_change))
+                      
+                      file_changes.append({
+                          'index': i,
+                          'file_name': file_name,
+                          'max_change': max_change,
+                          'defective_change': defective_change,
+                          'non_defective_change': non_defective_change,
+                          'base_defective': base_defective,
+                          'base_non_defective': base_non_defective,
+                          'head_defective': head_defective,
+                          'head_non_defective': head_non_defective
+                      })
+                  else:
+                      file_changes.append({
+                          'index': i,
+                          'file_name': file_name,
+                          'max_change': 0,
+                          'error': True
+                      })
+              
+              # Sort files by maximum percentage change in descending order
+              file_changes.sort(key=lambda x: x['max_change'], reverse=True)
+              
+              # Generate output with sorted files
+              output = ["## 📊 Bug Prediction Analysis\n"]
+              
+              for file_data in file_changes:
+                  file_name = file_data['file_name']
+                  output.append(f"#### File: `{file_name}`\n")
+                  
+                  if 'error' in file_data:
+                      output.append("| Status |")
+                      output.append("|--------|")
+                      output.append("| Error: Prediction data not available |")
+                      output.append("")
+                  else:
+                      base_defective = file_data['base_defective']
+                      base_non_defective = file_data['base_non_defective']
+                      head_defective = file_data['head_defective']
+                      head_non_defective = file_data['head_non_defective']
+                      defective_change = file_data['defective_change']
+                      non_defective_change = file_data['non_defective_change']
+                      
+                      # Format percentage change values
+                      def format_change(change_val):
+                          if change_val == float('inf'):
+                              return "∞%"
+                          elif change_val == float('-inf'):
+                              return "-∞%"
+                          else:
+                              return f"{change_val:+.2f}%"
+
+                      before = "Defective" if base_defective > base_non_defective else "Non-Defective"
+                      after = "Defective" if head_defective > head_non_defective else "Non-Defective"
+
+                      output.append("Outcome: " + before + " -> " + after)
+                      
+                      # Create table with 4 columns
+                      output.append("| Metric | BEFORE PR | AFTER PR | % Change |")
+                      output.append("|--------|-----------|----------|----------|")
+                      output.append(f"| PDF(Defective \\| Reconstruction Error) | {base_defective} | {head_defective} | {format_change(defective_change)} |")
+                      output.append(f"| PDF(Non-Defective \\| Reconstruction Error) | {base_non_defective} | {head_non_defective} | {format_change(non_defective_change)} |")
+                      output.append("")
+              
+              return "\n".join(output)
 
           def format_results(file_names, prediction_data):
               """Format results with probability values (for individual calls)"""
@@ -213,7 +305,7 @@ jobs:
               
               return classifier
 
-          def predict(features_file, model_dir="trained_model", output_file=None):
+          def predict(features_file, model_dir="trained_model"):
               """Make predictions using pre-trained model"""
               
               classifier = load_trained_model(model_dir)
@@ -244,114 +336,30 @@ jobs:
               # Format and return results
               results = format_results(file_names, prediction_data)
               
-              # Save to output file if specified
-              if output_file:
-                  # Create submission CSV format
-                  submission_data = []
-                  for i, file_name in enumerate(file_names):
-                      if i < len(prediction_data):
-                          # Use p_defective as the predicted v(g) value
-                          predicted_vg = prediction_data[i]['p_defective']
-                          submission_data.append({
-                              'File': file_name,
-                              'Predicted_v(g)': predicted_vg
-                          })
-                      else:
-                          submission_data.append({
-                              'File': file_name,
-                              'Predicted_v(g)': 0.0
-                          })
-                  
-                  submission_df = pd.DataFrame(submission_data)
-                  submission_df.to_csv(output_file, index=False)
-                  print(f"Predictions saved to {output_file}")
-              
               # Close the session
               classifier.dim_reduction_model.close()
               
               return results
 
-          def print_usage():
-              """Print usage information"""
-              print("Usage:")
-              print("  python predict.py <features_csv> [model_dir] [output_csv]")
-              print("  python predict.py --input <features_csv> --model-dir <model_dir> --output <output_csv>")
-              print("")
-              print("Arguments:")
-              print("  features_csv    Path to the CSV file containing extracted features")
-              print("  model_dir       Path to the directory containing trained model files (default: 'trained_model')")
-              print("  output_csv      Path to save predictions as CSV (optional)")
-              print("")
-              print("Examples:")
-              print("  python predict.py features.csv")
-              print("  python predict.py features.csv ./my_model")
-              print("  python predict.py features.csv ./my_model predictions.csv")
-              print("  python predict.py --input features.csv --model-dir ./my_model --output predictions.csv")
-
           if __name__ == "__main__":
-              if len(sys.argv) < 2:
-                  print_usage()
+              if len(sys.argv) != 2:
+                  print("Usage: python predict.py <path_to_features.csv>")
+                  print("Make sure the trained model exists in the 'trained_model' directory.")
                   sys.exit(1)
               
-              # Parse command line arguments
-              features_csv_path = None
-              model_dir = "trained_model"
-              output_file = None
+              features_csv_path = sys.argv[1]
+              results = predict(features_csv_path)
               
-              # Support both positional and named arguments
-              if sys.argv[1] == "--input":
-                  # Named argument format
-                  i = 1
-                  while i < len(sys.argv):
-                      if sys.argv[i] == "--input" and i + 1 < len(sys.argv):
-                          features_csv_path = sys.argv[i + 1]
-                          i += 2
-                      elif sys.argv[i] == "--model-dir" and i + 1 < len(sys.argv):
-                          model_dir = sys.argv[i + 1]
-                          i += 2
-                      elif sys.argv[i] == "--output" and i + 1 < len(sys.argv):
-                          output_file = sys.argv[i + 1]
-                          i += 2
-                      else:
-                          i += 1
-              else:
-                  # Positional argument format
-                  features_csv_path = sys.argv[1]
-                  if len(sys.argv) > 2:
-                      model_dir = sys.argv[2]
-                  if len(sys.argv) > 3:
-                      output_file = sys.argv[3]
-              
-              if not features_csv_path:
-                  print("Error: Features CSV file path is required")
-                  print_usage()
-                  sys.exit(1)
-              
-              if not os.path.exists(features_csv_path):
-                  print(f"Error: Features CSV file not found: {features_csv_path}")
-                  sys.exit(1)
-              
-              if not os.path.exists(model_dir):
-                  print(f"Error: Model directory not found: {model_dir}")
-                  sys.exit(1)
-              
-              try:
-                  results = predict(features_csv_path, model_dir, output_file)
-                  
-                  # For command line usage, print individual results
-                  for result in results:
-                      if 'error' in result:
-                          print(f"File: {result['file']}")
-                          print(f"Error: {result['error']}")
-                      else:
-                          print(f"File: {result['file']}")
-                          print(f"PDF(Defective | Reconstruction Error): {result['p_defective']}")
-                          print(f"PDF(Non-Defective | Reconstruction Error): {result['p_non_defective']}")
-                      print()
-                      
-              except Exception as e:
-                  print(f"Error during prediction: {str(e)}", file=sys.stderr)
-                  sys.exit(1)
+              # For command line usage, print individual results
+              for result in results:
+                  if 'error' in result:
+                      print(f"File: {result['file']}")
+                      print(f"Error: {result['error']}")
+                  else:
+                      print(f"File: {result['file']}")
+                      print(f"PDF(Defective | Reconstruction Error): {result['p_defective']}")
+                      print(f"PDF(Non-Defective | Reconstruction Error): {result['p_non_defective']}")
+                  print()
           EOF
 
       - name: Check Dataset Availability
@@ -602,15 +610,15 @@ jobs:
 
           # Extract features for base commit
           git checkout "$base_sha"
-          mkdir -p ../metrics_base
-          echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > ../metrics_base/summary_metrics.csv
+          mkdir -p ../metrics_output_base
+          echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > ../metrics_output_base/summary_metrics.csv
           for file in $changed_files; do
             if [ -f "$file" ]; then
               echo "Processing $file (base)..."
               ../extract_traditional_features.sh "$file"
               generated_dir=$(ls -td ../metrics_output_* 2>/dev/null | head -n 1)
               if [ -d "$generated_dir" ] && [ -f "$generated_dir/summary_metrics.csv" ]; then
-                tail -n +2 "$generated_dir/summary_metrics.csv" >> ../metrics_base/summary_metrics.csv
+                tail -n +2 "$generated_dir/summary_metrics.csv" >> ../metrics_output_base/summary_metrics.csv
                 rm -rf "$generated_dir"
               fi
             fi
@@ -618,15 +626,15 @@ jobs:
 
           # Extract features for head commit
           git checkout "$head_sha"
-          mkdir -p ../metrics_head
-          echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > ../metrics_head/summary_metrics.csv
+          mkdir -p ../metrics_output_head
+          echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > ../metrics_output_head/summary_metrics.csv
           for file in $changed_files; do
             if [ -f "$file" ]; then
               echo "Processing $file (head)..."
               ../extract_traditional_features.sh "$file"
               generated_dir=$(ls -td ../metrics_output_* 2>/dev/null | head -n 1)
               if [ -d "$generated_dir" ] && [ -f "$generated_dir/summary_metrics.csv" ]; then
-                tail -n +2 "$generated_dir/summary_metrics.csv" >> ../metrics_head/summary_metrics.csv
+                tail -n +2 "$generated_dir/summary_metrics.csv" >> ../metrics_output_head/summary_metrics.csv
                 rm -rf "$generated_dir"
               fi
             fi
@@ -647,277 +655,64 @@ jobs:
             curl -fSL -o trained_model/autoencoder.data-00000-of-00001 "$base_url/autoencoder.data-00000-of-00001"
             curl -fSL -o trained_model/checkpoint               "$base_url/checkpoint"
 
-            # Create updated predict.py with comparison functionality
-            cat > predict_compare.py << 'EOF'
-          import pandas as pd
-          from REPD_Impl import REPD
-          from autoencoder import AutoEncoder
-          import warnings
-          import tensorflow.compat.v1 as tf
-          import numpy as np
-          import json
+            # Create the comparison script exactly like the old working workflow
+            cat > compare_predictions.py << 'EOF'
           import sys
-          import os
-          import scipy.stats as st
+          import json
+          from predict import predict, format_results_for_comparison
 
-          # Suppress warnings
-          tf.disable_v2_behavior()
-          warnings.simplefilter("ignore")
+          # Get predictions for base and head
+          base_results = predict('metrics_output_base/summary_metrics.csv')
+          head_results = predict('metrics_output_head/summary_metrics.csv')
 
-          def format_predictions(predictions):
-              """Format PDF predictions for display"""
-              results = []
-              
-              for i in range(predictions.shape[0]):
-                  pred = predictions[i]
-                  
-                  # Extract probabilities
-                  if isinstance(pred, np.ndarray) and len(pred) >= 2:
-                      p_defective = float(pred[0])
-                      p_non_defective = float(pred[1])
-                  else:
-                      p_defective = 0.0
-                      p_non_defective = 0.0
-                  
-                  results.append({
-                      'p_defective': p_defective,
-                      'p_non_defective': p_non_defective
-                  })
-              
-              return results
+          # Extract file names (should be the same for both)
+          file_names = [result['file'] for result in base_results if 'file' in result]
 
-          def format_results_for_comparison(file_names, base_data, head_data):
-              """Format results as tables comparing BEFORE and AFTER for each file"""
-              
-              # First, calculate percentage changes for all files to determine sorting order
-              file_changes = []
-              
-              for i, file_name in enumerate(file_names):
-                  if i < len(base_data) and i < len(head_data):
-                      base_defective = base_data[i]['p_defective']
-                      base_non_defective = base_data[i]['p_non_defective']
-                      head_defective = head_data[i]['p_defective']
-                      head_non_defective = head_data[i]['p_non_defective']
-                      
-                      # Calculate percentage changes
-                      if base_defective != 0:
-                          defective_change = ((head_defective - base_defective) / abs(base_defective)) * 100
-                      else:
-                          defective_change = 0 if head_defective == 0 else float('inf')
-                      
-                      if base_non_defective != 0:
-                          non_defective_change = ((head_non_defective - base_non_defective) / abs(base_non_defective)) * 100
-                      else:
-                          non_defective_change = 0 if head_non_defective == 0 else float('inf')
-                      
-                      # Use the maximum absolute change for sorting
-                      max_change = max(abs(defective_change), abs(non_defective_change))
-                      
-                      file_changes.append({
-                          'index': i,
-                          'file_name': file_name,
-                          'max_change': max_change,
-                          'defective_change': defective_change,
-                          'non_defective_change': non_defective_change,
-                          'base_defective': base_defective,
-                          'base_non_defective': base_non_defective,
-                          'head_defective': head_defective,
-                          'head_non_defective': head_non_defective
-                      })
-                  else:
-                      file_changes.append({
-                          'index': i,
-                          'file_name': file_name,
-                          'max_change': 0,
-                          'error': True
-                      })
-              
-              # Sort files by maximum percentage change in descending order
-              file_changes.sort(key=lambda x: x['max_change'], reverse=True)
-              
-              # Generate output with sorted files
-              output = ["## 📊 Bug Prediction Analysis\n"]
-              
-              for file_data in file_changes:
-                  file_name = file_data['file_name']
-                  output.append(f"#### File: `{file_name}`\n")
-                  
-                  if 'error' in file_data:
-                      output.append("| Status |")
-                      output.append("|--------|")
-                      output.append("| Error: Prediction data not available |")
-                      output.append("")
-                  else:
-                      base_defective = file_data['base_defective']
-                      base_non_defective = file_data['base_non_defective']
-                      head_defective = file_data['head_defective']
-                      head_non_defective = file_data['head_non_defective']
-                      defective_change = file_data['defective_change']
-                      non_defective_change = file_data['non_defective_change']
-                      
-                      # Format percentage change values
-                      def format_change(change_val):
-                          if change_val == float('inf'):
-                              return "∞%"
-                          elif change_val == float('-inf'):
-                              return "-∞%"
-                          else:
-                              return f"{change_val:+.2f}%"
+          # Convert to the format expected by format_results_for_comparison
+          base_data = [{'p_defective': r['p_defective'], 'p_non_defective': r['p_non_defective']} 
+                       for r in base_results if 'p_defective' in r]
+          head_data = [{'p_defective': r['p_defective'], 'p_non_defective': r['p_non_defective']} 
+                       for r in head_results if 'p_defective' in r]
 
-                      before = "Defective" if base_defective > base_non_defective else "Non-Defective"
-                      after = "Defective" if head_defective > head_non_defective else "Non-Defective"
+          # Generate comparison table
+          comparison_output = format_results_for_comparison(file_names, base_data, head_data)
 
-                      output.append("Outcome: " + before + " -> " + after)
-                      
-                      # Create table with 4 columns
-                      output.append("| Metric | BEFORE PR | AFTER PR | % Change |")
-                      output.append("|--------|-----------|----------|----------|")
-                      output.append(f"| PDF(Defective \\| Reconstruction Error) | {base_defective} | {head_defective} | {format_change(defective_change)} |")
-                      output.append(f"| PDF(Non-Defective \\| Reconstruction Error) | {base_non_defective} | {head_non_defective} | {format_change(non_defective_change)} |")
-                      output.append("")
-              
-              return "\n".join(output)
-
-          def get_distribution_class(dist_name):
-              """Get the distribution class (not frozen) from scipy.stats"""
-              if dist_name is None:
-                  return None
-              
-              try:
-                  dist_class = getattr(st, dist_name)
-                  return dist_class
-              except Exception as e:
-                  return None
-
-          def load_trained_model(model_dir="trained_model"):
-              """Load the pre-trained model"""
-              if not os.path.exists(model_dir):
-                  raise FileNotFoundError(f"Trained model not found at {model_dir}. Please ensure the model is trained and saved.")
-              
-              # Load metadata from JSON
-              metadata_path = os.path.join(model_dir, "metadata.json")
-              if not os.path.exists(metadata_path):
-                  raise FileNotFoundError(f"Model metadata not found at {metadata_path}")
-              
-              with open(metadata_path, 'r') as f:
-                  metadata = json.load(f)
-              
-              # Load REPD classifier parameters from JSON
-              classifier_params_path = os.path.join(model_dir, "classifier_params.json")
-              if not os.path.exists(classifier_params_path):
-                  raise FileNotFoundError(f"Classifier parameters not found at {classifier_params_path}")
-              
-              with open(classifier_params_path, 'r') as f:
-                  classifier_params = json.load(f)
-                  
-              # Recreate the autoencoder with saved architecture
-              autoencoder = AutoEncoder(
-                  metadata['architecture'], 
-                  metadata['learning_rate'], 
-                  metadata['epochs'], 
-                  metadata['batch_size']
-              )
-              
-              # Load the saved autoencoder weights
-              autoencoder_path = os.path.join(model_dir, "autoencoder")
-              autoencoder.load(autoencoder_path)
-              
-              # Recreate REPD classifier
-              classifier = REPD(autoencoder)
-                  
-              # Non-defective distribution
-              classifier.dnd = get_distribution_class(classifier_params.get('dnd_name'))
-              classifier.dnd_pa = tuple(classifier_params.get('dnd_params', []))
-              
-              # Defective distribution  
-              classifier.dd = get_distribution_class(classifier_params.get('dd_name'))
-              classifier.dd_pa = tuple(classifier_params.get('dd_params', []))
-              
-              # Check if distributions were created successfully
-              if classifier.dnd is None:
-                  raise ValueError("Failed to get non-defective distribution class")
-              if classifier.dd is None:
-                  raise ValueError("Failed to get defective distribution class")
-              
-              return classifier
-
-          def predict_and_compare(base_file, head_file, model_dir="trained_model"):
-              """Make predictions and generate comparison table"""
-              
-              classifier = load_trained_model(model_dir)
-              
-              # Load base data
-              df_base = pd.read_csv(base_file)
-              if len(df_base) == 0:
-                  return "No files to analyze in base commit."
-              
-              file_names_base = df_base["File"].values
-              X_base = df_base.drop(columns=["File"]).values
-              
-              # Load head data
-              df_head = pd.read_csv(head_file)
-              if len(df_head) == 0:
-                  return "No files to analyze in head commit."
-              
-              file_names_head = df_head["File"].values
-              X_head = df_head.drop(columns=["File"]).values
-              
-              # Make predictions for base
-              base_predictions = classifier.predict(X_base)
-              base_data = format_predictions(base_predictions)
-              
-              # Make predictions for head
-              head_predictions = classifier.predict(X_head)
-              head_data = format_predictions(head_predictions)
-              
-              # Generate comparison table
-              comparison_table = format_results_for_comparison(file_names_head, base_data, head_data)
-              
-              # Close the session
-              classifier.dim_reduction_model.close()
-              
-              return comparison_table
-
-          if __name__ == "__main__":
-              if len(sys.argv) != 4:
-                  print("Usage: python predict_compare.py <base_csv> <head_csv> <model_dir>")
-                  sys.exit(1)
-              
-              base_file = sys.argv[1]
-              head_file = sys.argv[2]
-              model_dir = sys.argv[3]
-              
-              result = predict_and_compare(base_file, head_file, model_dir)
-              print(result)
+          print(comparison_output)
           EOF
 
             echo "Running comparison predictions..."
             
             # Check if both base and head metrics exist
-            if [ -f "./metrics_base/summary_metrics.csv" ] && [ -f "./metrics_head/summary_metrics.csv" ]; then
-              comparison_result=$(python3 predict_compare.py ./metrics_base/summary_metrics.csv ./metrics_head/summary_metrics.csv ./trained_model 2>/dev/null)
+            if [ -f "./metrics_output_base/summary_metrics.csv" ] && [ -f "./metrics_output_head/summary_metrics.csv" ]; then
+              comparison_result=$(python3 compare_predictions.py 2>/dev/null)
               
               if [ $? -eq 0 ] && [ ! -z "$comparison_result" ]; then
-                # Save the comparison result for the comment step
-                echo "$comparison_result" > comparison_output.txt
-                echo "analysis_result<<EOF" >> $GITHUB_OUTPUT
-                echo "$comparison_result" >> $GITHUB_OUTPUT
-                echo "EOF" >> $GITHUB_OUTPUT
+                # Use the same output format as the old workflow
+                {
+                  echo "comment<<EOF"
+                  echo "$comparison_result"
+                  echo ""
+                  echo "### 📋 Interpretation Note:"
+                  echo "> The values shown are Probability Densities (PDFs), not probabilities. They represent the model's assessment of how likely a file's characteristics are to be 'defective' vs. 'non-defective'. A higher value indicates a better fit for that category. Very small values are expected and normal."
+                  echo ""
+                  echo "EOF"
+                } >> $GITHUB_OUTPUT
               else
-                echo "analysis_result=Comparison prediction failed. Model artifacts present but predict_compare.py invocation failed." >> $GITHUB_OUTPUT
+                echo "comment=Comparison prediction failed. Model artifacts present but compare_predictions.py invocation failed." >> $GITHUB_OUTPUT
               fi
             else
-              echo "analysis_result=Missing base or head metrics files for comparison." >> $GITHUB_OUTPUT
+              echo "comment=Missing base or head metrics files for comparison." >> $GITHUB_OUTPUT
             fi
           else
             echo "No model found for predictions"
-            echo "analysis_result=No model found for predictions." >> $GITHUB_OUTPUT
+            echo "comment=No model found for predictions." >> $GITHUB_OUTPUT
           fi
 
-      - name: Comment Results
+      - name: Comment on PR
+        if: steps.analysis.outputs.comment != ''
         uses: actions/github-script@v6
         env:
-          ANALYSIS_RESULT: "${{ steps.analysis.outputs.analysis_result }}"
+          COMMENT_BODY: "${{ steps.analysis.outputs.comment }}"
           PR_LINK: "${{ steps.parse-command.outputs.pr_link }}"
           REPO_NAME: "${{ steps.parse-command.outputs.full_repo_name }}"
         with:
@@ -928,12 +723,7 @@ jobs:
             **Target PR:** ${process.env.PR_LINK}
             **Repository:** ${process.env.REPO_NAME}
 
-            ${process.env.ANALYSIS_RESULT}
-
-            ---
-
-            ### 📋 Interpretation Note:
-            > The values shown are Probability Densities (PDFs), not probabilities. They represent the model's assessment of how likely a file's characteristics are to be 'defective' vs. 'non-defective'. A higher value indicates a better fit for that category. Very small values are expected and normal.
+            ${process.env.COMMENT_BODY}
 
             *Analysis performed by GlitchWitcher Bot*`;
 
