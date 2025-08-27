@@ -1,0 +1,259 @@
+name: GlitchWitcher - Bug Prediction Analysis
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  glitch-witcher:
+    runs-on: ubuntu-latest
+    if: contains(github.event.comment.body, 'GlitchWitcher')
+
+    steps:
+      - name: Parse GlitchWitcher Command
+        id: parse-command
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const body = context.payload.comment?.body ?? '';
+            core.info(`Full comment: ${body}`);
+
+            // Look for an explicit PR link in the comment
+            const linkMatch = body.match(/https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+/);
+
+            let prLink = null;
+            if (linkMatch) {
+              prLink = linkMatch[0];
+              core.info(`PR link provided: ${prLink}`);
+            } else {
+              // Allow "GlitchWitcher" alone when the comment is on a PR
+              const hasCmdOnly = /(^|\s)GlitchWitcher\s*$/.test(body);
+              if (hasCmdOnly && context.payload.issue?.pull_request) {
+                const { owner, repo } = context.repo;
+                const prNumber = context.issue.number;
+                prLink = `https://github.com/${owner}/${repo}/pull/${prNumber}`;
+                core.info(`Using current PR: ${prLink}`);
+              } else {
+                core.setFailed('ERROR: Invalid GlitchWitcher command format or missing PR link');
+                return;
+              }
+            }
+
+            // Extract repo owner/name/number from the PR link
+            const m = prLink.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)$/);
+            if (!m) {
+              core.setFailed(`ERROR: Could not parse repository info from PR link: ${prLink}`);
+              return;
+            }
+            const [, repoOwner, repoName, prNumber] = m;
+            const fullRepoName = `${repoOwner}-${repoName}`;
+            const repoUrl = `https://github.com/${repoOwner}/${repoName}.git`;
+
+            core.setOutput('repo_owner', repoOwner);
+            core.setOutput('repo_name', repoName);
+            core.setOutput('pr_number', prNumber);
+            core.setOutput('full_repo_name', fullRepoName);
+            core.setOutput('pr_link', prLink);
+            core.setOutput('repo_url', repoUrl)
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install tensorflow==2.12.0 pandas joblib scipy numpy urllib3 scikit-learn
+          sudo apt-get update
+          sudo apt-get install -y cloc git
+
+      - name: Download scripts
+        run: |
+          echo "Downloading scripts from aqa-test-tools repository..."
+          curl -L -o ExtractTraditionalFeatures.sh "https://raw.githubusercontent.com/adoptium/aqa-triage-data/refs/heads/main/GlitchWitcher/Traditional%20Dataset/ExtractTraditionalFeatures.sh"
+          curl -L -o extract_traditional_features.sh "https://raw.githubusercontent.com/anirudhsengar/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/extract_traditional_features.sh"
+          curl -L -o predict.py "https://raw.githubusercontent.com/anirudhsengar/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/predict.py"
+          curl -L -o save_trained_model.py "https://raw.githubusercontent.com/anirudhsengar/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/save_trained_model.py"
+          curl -L -o REPD_Impl.py "https://raw.githubusercontent.com/anirudhsengar/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/REPD_Impl.py"
+          curl -L -o autoencoder.py "https://raw.githubusercontent.com/anirudhsengar/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/autoencoder.py"
+          curl -L -o stat_util.py "https://raw.githubusercontent.com/anirudhsengar/aqa-test-tools/refs/heads/master/BugPredict/GlitchWitcher/stat_util.py"
+          chmod +x ExtractTraditionalFeatures.sh
+          chmod +x extract_traditional_features.sh
+
+      - name: Run Analysis on Target PR
+        id: analysis
+        run: |
+          set -e
+          echo "Running GlitchWitcher analysis on ${{ steps.parse-command.outputs.pr_link }}..."
+
+          # Get PR details using GitHub API
+          pr_api_url="https://api.github.com/repos/${{ steps.parse-command.outputs.repo_owner }}/${{ steps.parse-command.outputs.repo_name }}/pulls/${{ steps.parse-command.outputs.pr_number }}"
+          pr_info=$(curl -s -H "Accept: application/vnd.github.v3+json" "$pr_api_url")
+
+          # Parse base/head SHAs using Python (more robust than grep)
+          base_sha=$(printf "%s" "$pr_info" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d['base']['sha'])")
+          head_sha=$(printf "%s" "$pr_info" | python3 -c "import sys, json; d=json.load(sys.stdin); print(d['head']['sha'])")
+
+          echo "Base SHA: $base_sha"
+          echo "Head SHA: $head_sha"
+
+          # Clone the target repository
+          git clone "${{ steps.parse-command.outputs.repo_url }}" target_repo
+
+          # Ensure we have the PR head commit (works for forks)
+          git -C target_repo fetch origin "pull/${{ steps.parse-command.outputs.pr_number }}/head:prhead" || true
+          git -C target_repo fetch --all --tags --prune
+
+          # Get changed files between base..head (C/C++ only)
+          merge_base=$(git -C target_repo merge-base "$base_sha" "$head_sha")
+          echo "Merge base: $merge_base"
+          changed_files=$(git -C target_repo diff --name-only "$merge_base" "$head_sha" | grep -E "\.(c|cpp|cxx|cc|h|hpp|hxx)$" || true)
+
+          if [ -z "$changed_files" ]; then
+            echo "No C/C++ files changed in this PR"
+            echo "comment=No C/C++ files found in the PR changes." >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Changed files:"
+          printf "%s\n" "$changed_files"
+
+          # Extract features for base commit
+          git -C target_repo checkout "$base_sha"
+          mkdir -p metrics_output_base
+          echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > metrics_output_base/summary_metrics.csv
+
+          for file in $changed_files; do
+            fpath="target_repo/$file"
+            if [ -f "$fpath" ]; then
+              echo "Processing $file (base)..."
+              ./extract_traditional_features.sh "$fpath"
+              generated_dir=$(ls -td metrics_output_* 2>/dev/null | head -n 1 || true)
+              if [ -n "$generated_dir" ] && [ -d "$generated_dir" ] && [ -f "$generated_dir/summary_metrics.csv" ]; then
+                tail -n +2 "$generated_dir/summary_metrics.csv" >> metrics_output_base/summary_metrics.csv
+                rm -rf "$generated_dir"
+              else
+                echo "Warning: No metrics generated for $file (base)."
+              fi
+            else
+              echo "Warning: File not found at $fpath (base)."
+            fi
+          done
+
+          # Extract features for head commit
+          git -C target_repo checkout "$head_sha"
+          mkdir -p metrics_output_head
+          echo "File,loc,v(g),ev(g),iv(g),n,v,l,d,i,e,b,t,lOComment,lOBlank,LOCodeAndComment,uniq_Op,Uniq_Opnd,total_Op,total_Opnd,branchCount" > metrics_output_head/summary_metrics.csv
+
+          for file in $changed_files; do
+            fpath="target_repo/$file"
+            if [ -f "$fpath" ]; then
+              echo "Processing $file (head)..."
+              ./extract_traditional_features.sh "$fpath"
+              generated_dir=$(ls -td metrics_output_* 2>/dev/null | head -n 1 || true)
+              if [ -n "$generated_dir" ] && [ -d "$generated_dir" ] && [ -f "$generated_dir/summary_metrics.csv" ]; then
+                tail -n +2 "$generated_dir/summary_metrics.csv" >> metrics_output_head/summary_metrics.csv
+                rm -rf "$generated_dir"
+              else
+                echo "Warning: No metrics generated for $file (head)."
+              fi
+            else
+              echo "Warning: File not found at $fpath (head)."
+            fi
+          done
+
+          echo "=== Row counts ==="
+          echo "Base rows: $(wc -l < metrics_output_base/summary_metrics.csv || echo 0)"
+          echo "Head rows: $(wc -l < metrics_output_head/summary_metrics.csv || echo 0)"
+
+          # Prepare trained model: Always download from eclipse-openj9-openj9
+          have_model="false"
+          echo "Preparing TensorFlow model artifacts from eclipse-openj9-openj9..."
+          mkdir -p trained_model
+          base_url="https://raw.githubusercontent.com/anirudhsengar/aqa-triage-data/refs/heads/main/GlitchWitcher/Traditional%20Dataset/eclipse-openj9-openj9/trained_model"
+          if \
+            curl -fSL -o trained_model/metadata.json                   "$base_url/metadata.json" && \
+            curl -fSL -o trained_model/classifier_params.json          "$base_url/classifier_params.json" && \
+            curl -fSL -o trained_model/autoencoder.index               "$base_url/autoencoder.index" && \
+            curl -fSL -o trained_model/autoencoder.meta                "$base_url/autoencoder.meta" && \
+            curl -fSL -o trained_model/autoencoder.data-00000-of-00001 "$base_url/autoencoder.data-00000-of-00001" && \
+            curl -fSL -o trained_model/checkpoint                      "$base_url/checkpoint"
+          then
+            have_model="true"
+          elif [ -d "trained_model" ]; then
+            echo "Using pre-existing trained_model directory..."
+            have_model="true"
+          else
+            echo "Failed to download model artifacts from $base_url"
+          fi
+
+          if [ "$have_model" != "true" ]; then
+            echo "comment=No model found for predictions." >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Create the comparison script
+          cat > compare_predictions.py << 'EOF'
+          import sys, os
+          from predict import predict, format_results_for_comparison
+
+          base_results = predict('metrics_output_base/summary_metrics.csv')
+          head_results = predict('metrics_output_head/summary_metrics.csv')
+
+          file_names = [os.path.basename(str(r['file']).replace('\\','/')) for r in base_results if 'file' in r]
+          base_data = [{'p_defective': r['p_defective'], 'p_non_defective': r['p_non_defective']} for r in base_results if 'p_defective' in r]
+          head_data = [{'p_defective': r['p_defective'], 'p_non_defective': r['p_non_defective']} for r in head_results if 'p_defective' in r]
+
+          comparison_output = format_results_for_comparison(file_names, base_data, head_data)
+          print(comparison_output)
+          EOF
+
+          echo "Running comparison predictions..."
+          if [ -f "metrics_output_base/summary_metrics.csv" ] && [ -f "metrics_output_head/summary_metrics.csv" ]; then
+            comparison_result=$(python3 compare_predictions.py)
+            if [ -n "$comparison_result" ]; then
+              {
+                echo "comment<<EOF"
+                echo "$comparison_result"
+                echo ""
+                echo "### 📋 Interpretation Note:"
+                echo "> The values shown are Probability Densities (PDFs), not probabilities. They represent the model's assessment of how likely a file's characteristics are to be 'defective' vs. 'non-defective'. A higher value indicates a better fit for that category. Very small values are expected and normal."
+                echo ""
+                echo "EOF"
+              } >> $GITHUB_OUTPUT
+            else
+              echo "comment=Comparison prediction produced no output." >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "comment=Missing base or head metrics files for comparison." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR
+        if: steps.analysis.outputs.comment != ''
+        uses: actions/github-script@v6
+        env:
+          COMMENT_BODY: "${{ steps.analysis.outputs.comment }}"
+          PR_LINK: "${{ steps.parse-command.outputs.pr_link }}"
+          REPO_NAME: "${{ steps.parse-command.outputs.full_repo_name }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commentBody = `## 🔮 GlitchWitcher Analysis Results
+
+            **Target PR:** ${process.env.PR_LINK}
+            **Repository:** ${process.env.REPO_NAME}
+
+            ${process.env.COMMENT_BODY}
+
+            *Analysis performed by GlitchWitcher Bot*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
